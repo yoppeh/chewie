@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# chewie-chat 
+#
+# wrapper that uses chewie to implement a general-purpose chat bot.
+#
+
+
+echo "Setting up chewie-chat... "
+if [ "$CHEWIE_API" == "ollama" ]; then
+CHEWIECHAT_MODEL="llama2-uncensored:latest"
+echo "Using ollama API"
+elif [ "$CHEWIE_API" == "openai" ]; then
+CHEWIECHAT_MODEL="gpt-3.5-turbo"
+echo "Using OpenAI API"
+else
+CHEWIE_API=ollama
+CHEWIECHAT_MODEL="llama2-uncensored:latest"
+echo "Using ollama API"
+fi
+echo "Using API \"$CHEWIE_API\""
+echo "Using model \"$CHEWIECHAT_MODEL\""
+
+CHEWIECHAT_CONTEXT_FILENAME=chewie-chat-context.json
+CHEWIECHAT_CONTEXT_PATH=~/.cache/chewie
+export CHEWIECHAT_CONTEXT_FILE=$CHEWIECHAT_CONTEXT_PATH/$CHEWIECHAT_CONTEXT_FILENAME
+
+echo "Using context file \"$CHEWIECHAT_CONTEXT_FILE\""
+mkdir -p $CHEWIECHAT_CONTEXT_PATH
+
+chewie r u mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are an intelligent assistant. You will answer my questions concisely and accurately. If you do not know the answer to a question, simply state that you do not know the answer." > /dev/null
+echo "done!"
+echo "Press Ctrl-C to exit."
+
+while [ 1 ] ; do
+    read -p "$USER > " input
+    echo -n "chewie > "
+    input=$(eval echo "$input")
+    echo "$input" | chewie mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE"
+done
+

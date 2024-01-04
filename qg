@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# qg 
+#
+# script that uses chewie to implement a git-specific chat bot.
+#
+
+if [ "$CHEWIE_API" == "ollama" ]; then
+QG_MODEL="codellama:7b-instruct"
+elif [ "$CHEWIE_API" == "openai" ]; then
+QG_MODEL="gpt-3.5-turbo"
+else
+QG_MODEL="codellama:7b-instruct"
+CHEWIE_API="ollama"
+fi
+
+QG_CONTEXT_PATH=~/.cache/chewie
+QG_CONTEXT=$QG_CONTEXT_PATH/qg-context.json
+
+if [ "$1" == "-h" ] ; then
+    echo "Usage: qg [options]"
+    echo "Options:"
+    echo "  -h  Display this help message."
+    echo "  -s  Setup (or reset) qg."
+    exit 0
+fi
+
+if [ "$1" == "-s" ] ; then
+    echo "Setting up qg... "
+    echo "Using API \"$CHEWIE_API\""
+    echo "Using model \"$QG_MODEL\""
+    echo "Using context file \"$QG_CONTEXT\""
+    mkdir -p $QG_CONTEXT_PATH
+    chewie r u ctx="$QG_CONTEXT" mdl="$QG_MODEL" sys="You are an intelligent assistant helping me with source code management using git. All of your responses should be in the context of using git for source code management. If you do not know the answer to a question, just say \"I don't know\"." > /dev/null
+    echo "done!"
+    exit 0
+fi
+
+echo "$@" | chewie ctx="$QG_CONTEXT" mdl="$QG_MODEL"

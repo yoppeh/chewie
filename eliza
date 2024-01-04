@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# eliza 
+#
+# script that uses chewieq to implement an improved ELIZA chat bot.
+#
+
+if [ "$CHEWIE_API" == "ollama" ]; then
+ELIZA_MODEL="samantha-mistral:7b-text-q8_0"
+elif [ "$CHEWIE_API" == "openai" ]; then
+ELIZA_MODEL="gpt-3.5-turbo"
+else
+CHEWIE_API="ollama"
+ELIZA_MODEL="samantha-mistral:7b-text-q8_0"
+fi
+
+ELIZA_CONTEXT_PATH=~/.cache/chewie
+ELIZA_CONTEXT=$ELIZA_CONTEXT_PATH/eliza-context.json
+
+if [ "$1" == "-h" ] ; then
+    echo "Usage: eliza [options]"
+    echo "Options:"
+    echo "  -h  Display this help message."
+    echo "  -s  Setup (or reset) eliza."
+    exit 0
+fi
+
+if [ "$1" == "-s" ] ; then
+    echo "Setting up eliza... "
+    echo "Using API \"$CHEWIE_API\""
+    echo "Using model \"$ELIZA_MODEL\""
+    echo "Using context file \"$ELIZA_CONTEXT\""
+    mkdir -p $ELIZA_CONTEXT_PATH
+    chewie r u ctx="$ELIZA_CONTEXT" mdl="$ELIZA_MODEL" sys="You are an intelligent assistant in a friendly conversation with me. Offer advice and support. Your name is ELIZA. My name is ${USER}." > /dev/null
+    echo "done!"
+    exit 0
+fi
+
+echo "Press Ctrl-C to exit."
+
+while [ 1 ] ; do
+    read -p "$USER > " input
+    echo -n "Eliza > "
+    echo "$input" | chewie ctx="$ELIZA_CONTEXT" mdl="$ELIZA_MODEL"
+done
