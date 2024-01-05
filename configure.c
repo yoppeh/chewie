@@ -32,13 +32,16 @@ static int set_missing_aih(option_t *option, json_object *actions_obj, json_obje
 static int set_missing_aip(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int set_missing_ctx(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int set_missing_mdl(option_t *option, json_object *actions_obj, json_object *settings_obj);
+static int set_missing_qry(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int set_missing_sys(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_aih_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_aip_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_ctx_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
-static int option_mdl_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_buf_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
+static int option_emb_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_his_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
+static int option_mdl_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
+static int option_qry_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_sys_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_h_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_r_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
@@ -75,6 +78,14 @@ static option_t option_mdl = {
     .value = NULL,
     .validate = option_mdl_validate,
     .set_missing = set_missing_mdl
+};
+static option_t option_qry = {
+    .name = "qry",
+    .description = "Set the query.",
+    .arg_type = option_arg_optional,
+    .value = NULL,
+    .validate = option_qry_validate,
+    .set_missing = set_missing_qry
 };
 static option_t option_h = {
     .name = "h",
@@ -126,13 +137,22 @@ static option_t option_sys = {
     .validate = option_sys_validate,
     .set_missing = set_missing_sys
 };
+static option_t option_emb = {
+    .name = "emb",
+    .description = "Generate embeddings for the input text.",
+    .arg_type = option_arg_none,
+    .value = NULL,
+    .validate = option_emb_validate
+};
 static option_t *common_options[] = {
     &option_buf,
     &option_aip,
     &option_aih,
     &option_ctx,
+    &option_emb,
     &option_his,
     &option_mdl,
+    &option_qry,
     &option_sys,
     &option_h,
     &option_r,
@@ -294,9 +314,11 @@ static int set_missing_mdl(option_t *option, json_object *actions_obj, json_obje
     json_object *value;
     const api_interface_t *api_interface = NULL;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_MODEL, &value)) {
+        debug("model is set to %s\n", json_object_get_string(value));
         return 0;
     }
     const char *m = context_get_model();
+    debug("model in context file is %s\n", m);
     if (m == NULL) {
         m = getenv(ENV_KEY_MODEL);
         if (m == NULL) {
@@ -312,6 +334,25 @@ static int set_missing_mdl(option_t *option, json_object *actions_obj, json_obje
         }
     }
     json_object_object_add(settings_obj, SETTING_KEY_AI_MODEL, json_object_new_string(m));
+    return 0;
+}
+
+static int set_missing_qry(option_t *option, json_object *actions_obj, json_object *settings_obj) {
+    debug("set_missing_qry()\n");
+    json_object *value;
+    if (json_object_object_get_ex(settings_obj, SETTING_KEY_PROMPT, &value)) {
+        return 0;
+    }
+    if (json_object_object_get_ex(actions_obj, ACTION_KEY_DUMP_QUERY_HISTORY, &value)) {
+        return 0;
+    }
+    if (json_object_object_get_ex(actions_obj, ACTION_KEY_GET_EMBEDDINGS, &value)) {
+        return 0;
+    }
+    if (json_object_object_get_ex(actions_obj, ACTION_KEY_LIST_MODELS, &value)) {
+        return 0;
+    }
+    json_object_object_add(actions_obj, ACTION_KEY_QUERY, NULL);
     return 0;
 }
 
@@ -365,6 +406,12 @@ static int option_ctx_validate(option_t *option, json_object *actions_obj, json_
     return 0;
 }
 
+static int option_emb_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
+    debug("option_emb_validate()\n");
+    json_object_object_add(actions_obj, ACTION_KEY_GET_EMBEDDINGS, json_object_new_boolean(true));
+    return 0;
+}
+
 static int option_his_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug("option_his_validate()\n");
     json_object_object_add(actions_obj, ACTION_KEY_DUMP_QUERY_HISTORY, json_object_new_boolean(true));
@@ -379,6 +426,17 @@ static int option_mdl_validate(option_t *option, json_object *actions_obj, json_
         return 0;
     }
     json_object_object_add(settings_obj, SETTING_KEY_AI_MODEL, json_object_new_string(option->value));
+    return 0;
+}
+
+static int option_qry_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
+    debug("option_qry_validate()\n");
+    if (option->value != NULL) {
+        json_object_object_add(settings_obj, SETTING_KEY_PROMPT, json_object_new_string(option->value));
+        json_object_object_add(actions_obj, ACTION_KEY_QUERY, json_object_new_string(option->value));
+    } else {
+        json_object_object_add(actions_obj, ACTION_KEY_QUERY, NULL);
+    }
     return 0;
 }
 

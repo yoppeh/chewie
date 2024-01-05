@@ -22,6 +22,8 @@
 #define ACTION_KEY_DUMP_QUERY_HISTORY   "dump-query-history"
 #define ACTION_KEY_SET_SYSTEM_PROMPT    "system-prompt"
 #define ACTION_KEY_UPDATE_CONTEXT       "update-context"
+#define ACTION_KEY_GET_EMBEDDINGS       "get-embeddings"
+#define ACTION_KEY_QUERY                "query"
 
 ///  The result of an action. These are sent back to the caller so it
 ///  knows whether to continue processing or not.

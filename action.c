@@ -15,11 +15,14 @@
 #include "configure.h"
 #include "context.h"
 #include "file.h"
+#include "input.h"
 #include "setting.h"
 
 static action_result_t dump_query_history(json_object *settings, json_object *data);
+static action_result_t get_embeddings(json_object *settings, json_object *data);
 static action_result_t list_apis(json_object *settings, json_object *data);
 static action_result_t list_models(json_object *settings, json_object *data);
+static action_result_t query(json_object *settings, json_object *data);
 static action_result_t show_help(json_object *settings, json_object *data);
 static action_result_t show_version(json_object *settings, json_object *data);
 static action_result_t reset_context(json_object *settings, json_object *data);
@@ -41,6 +44,10 @@ static action_t action_list_models = {
     .name = ACTION_KEY_LIST_MODELS,
     .callback = list_models,
 };
+static action_t action_query = {
+    .name = ACTION_KEY_QUERY,
+    .callback = query,
+};
 static action_t action_reset_context = {
     .name = ACTION_KEY_RESET_CONTEXT,
     .callback = reset_context,
@@ -53,6 +60,10 @@ static action_t action_update_context = {
     .name = ACTION_KEY_UPDATE_CONTEXT,
     .callback = update_context
 };
+static action_t action_get_embeddings = {
+    .name = ACTION_KEY_GET_EMBEDDINGS,
+    .callback = get_embeddings
+};
 static action_t *action_templates[] = {
     &action_version,
     &action_help,
@@ -61,6 +72,8 @@ static action_t *action_templates[] = {
     &action_reset_context,
     &action_dump_query_history,
     &action_update_context,
+    &action_get_embeddings,
+    &action_query,
     NULL
 };
 static action_t **merged_actions = NULL;
@@ -69,6 +82,7 @@ static action_t **action_merge(action_t **actions1, action_t **actions2);
 
 action_result_t action_execute_all(json_object *actions, json_object *settings) {
     debug("action_execute_all()\n");
+    debug("actions: %s\n", json_object_to_json_string_ext(actions, JSON_C_TO_STRING_PRETTY));
     action_t **a = action_templates;
     for (api_id_t i = 0; i < api_id_max; i++) {
         const api_interface_t *api_interface = api_interfaces[i + 1]();
@@ -89,6 +103,7 @@ action_result_t action_execute_all(json_object *actions, json_object *settings) 
                 }
                 if (r == ACTION_END) {
                     result = ACTION_END;
+                    break;
                 }
             }
         } 
@@ -101,6 +116,21 @@ term:
 static action_result_t dump_query_history(json_object *actions, json_object *settings_obj) {
     debug("dump_query_history()\n");
     context_dump_history();
+    return ACTION_END;
+}
+
+static action_result_t get_embeddings(json_object *settings, json_object *data) {
+    debug("get_embeddings()\n");
+    char *query = input_get();
+    debug("settings_obj = %s\n", json_object_to_json_string_ext(settings, JSON_C_TO_STRING_PRETTY));
+    if (query != NULL) {
+        json_object_object_add(settings, SETTING_KEY_PROMPT, json_object_new_string(query));
+        free(query);
+        query = NULL;
+        if (api_interface->get_embeddings(settings)) {
+            return ACTION_ERROR;
+        }
+    }
     return ACTION_END;
 }
 
@@ -118,7 +148,27 @@ static action_result_t list_apis(json_object *settings, json_object *data) {
 static action_result_t list_models(json_object *settings, json_object *data) {
     debug("list_models()\n");
     debug("data = %s\n", json_object_to_json_string_ext(data, JSON_C_TO_STRING_PRETTY));
-    api_interface->print_model_list(settings);
+    if (api_interface->print_model_list(settings)) {
+        return ACTION_ERROR;
+    }
+    return ACTION_END;
+}
+
+static action_result_t query(json_object *settings, json_object *data) {
+    debug("query()\n");
+    char *query = NULL;
+    json_object *prompt = NULL;
+    if (json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &prompt)) {
+        json_object_object_add(settings, SETTING_KEY_PROMPT, prompt);
+    } else {
+        query = input_get();
+        if (query != NULL) {
+            json_object_object_add(settings, SETTING_KEY_PROMPT, json_object_new_string(query));
+            free(query);
+            query = NULL;
+        }
+    }
+    api_interface->query(settings);
     return ACTION_END;
 }
 

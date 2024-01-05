@@ -23,6 +23,7 @@ typedef size_t (*setup_curl_callback_t)(void *, size_t, size_t, void *);
 
 static const char default_host[] = "https://api.openai.com";
 static const char api_query_endpoint[] = "/v1/chat/completions";
+static const char api_get_embeddings_endpoint[] = "/v1/embeddings";
 static const char api_listmodels_endpoint[] = "/v1/models";
 static const char default_model[] = "gpt-3.5-turbo";
 static const char auth_prefix[] = "Authorization: Bearer ";
@@ -43,10 +44,12 @@ static const char *get_default_host(void);
 static const char *get_default_model(void);
 static action_t **get_actions(void);
 static option_t **get_options(void);
+static int get_embeddings(json_object *settings);
+static size_t get_embeddings_callback(void *contents, size_t size, size_t nmemb, void *user_data);
 static char *get_endpoint(const char *host, const char *endpoint);
 static void openai_exit(void);
 static int openai_init(void);
-static void print_model_list(json_object *options);
+static int print_model_list(json_object *options);
 static size_t print_model_list_callback(void *contents, size_t size, size_t nmemb, void *user_data);
 static const char *query(json_object *options);
 static size_t query_callback(void *contents, size_t size, size_t nmemb, void *user_data);
@@ -59,6 +62,7 @@ static api_interface_t openai_api_interface = {
     .get_options = get_options,
     .get_default_host = get_default_host,
     .get_default_model = get_default_model,
+    .get_embeddings = get_embeddings,
     .get_api_name = get_api_name,
     .print_model_list = print_model_list,
     .query = query
@@ -107,6 +111,92 @@ static const char *get_default_host(void) {
 
 static const char *get_default_model(void) {
     return strdup(default_model);
+}
+
+static int get_embeddings(json_object *settings) {
+    debug("openai get_embeddings()\n");
+    CURLcode res;
+    json_object *query_obj = NULL; 
+    json_object *json_obj = NULL;
+    json_object *field_obj = NULL;
+    const char *response = NULL;
+    char *endpoint = NULL;
+    const char *host = default_host;
+    const char *model = default_model;
+    const char *context = NULL;
+    enum json_tokener_error jerr;
+    if (openai_init()) {
+        return 1;
+    }
+    if (json_object_object_get_ex(settings, SETTING_KEY_AI_HOST, &json_obj)) {
+        host = json_object_get_string(json_obj);
+    }
+    if ((endpoint = get_endpoint(host, api_get_embeddings_endpoint)) == NULL) {
+        return 1;
+    }
+    query_obj = json_object_new_object();
+    if (query_obj == NULL) {
+        fprintf(stderr, "Error creating new JSON object\n");
+        return 1;
+    }
+    json_object_object_add(query_obj, "input", json_object_object_get(settings, SETTING_KEY_PROMPT));
+    json_object_object_add(query_obj, "model", json_object_object_get(settings, SETTING_KEY_AI_MODEL));
+    setup_curl(query_obj, endpoint, get_embeddings_callback);
+    debug("openai get_embeddings: %s\n", json_object_to_json_string_ext(query_obj, JSON_C_TO_STRING_PLAIN));
+    res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
+        return 1;
+    }
+term:
+    openai_exit();
+    return 0;
+}
+
+static size_t get_embeddings_callback(void *contents, size_t size, size_t nmemb, void *user_data) {
+    static json_object *json_obj = NULL;
+    enum json_tokener_error jerr;
+    json_obj = json_tokener_parse_ex(json, contents, nmemb);
+    jerr = json_tokener_get_error(json);
+    if (jerr == json_tokener_continue) {
+        return nmemb;
+    }
+    if (jerr != json_tokener_success) {
+        fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
+        return 0;
+    }
+    enum json_type type = json_object_get_type(json_obj);
+    if (type != json_type_object) {
+        fprintf(stderr, "Response doesn't appear to be a JSON object\n");
+        return 0;
+    }
+    json_object *error_obj = json_object_object_get(json_obj, "error");
+    if (error_obj != NULL) {
+        json_object *message_obj = json_object_object_get(error_obj, "message");
+        if (message_obj != NULL) {
+            fprintf(stderr, "API error: %s\n", json_object_get_string(message_obj));
+        } else {
+            fprintf(stderr, "Error getting message from response\n");
+        }
+        return 0;
+    }
+    json_obj = json_object_object_get(json_obj, "data");
+    for (int x = 0, y = json_object_array_length(json_obj); x < y; x++) {
+        json_object *embedding_obj = json_object_array_get_idx(json_obj, x);
+        json_object *object = json_object_object_get(embedding_obj, "object");
+        if (strcmp(json_object_get_string(object), "embedding") == 0) {
+            json_object *embedding = json_object_object_get(embedding_obj, "embedding");
+            for (int i = 0, j = json_object_array_length(embedding); i < j; i++) {
+                json_object *v = json_object_array_get_idx(embedding, i);
+                if (i == j - 1) {
+                    printf("%s\n", json_object_to_json_string_ext(v, JSON_C_TO_STRING_PLAIN));
+                } else {
+                    printf("%s, ", json_object_to_json_string_ext(v, JSON_C_TO_STRING_PLAIN));
+                }
+            }
+        }
+    }
+    return nmemb;
 }
 
 static char *get_endpoint(const char *host, const char *api_endpoint) {
@@ -159,19 +249,19 @@ static int openai_init(void) {
     return 0;
 }
 
-static void print_model_list(json_object *options) {
+static int print_model_list(json_object *options) {
     CURLcode res;
     json_object *field_obj = NULL;
     const char *host = default_host;
     char *endpoint = NULL;
     if (openai_init()) {
-        return;
+        return 1;
     }
     if (json_object_object_get_ex(options, SETTING_KEY_AI_HOST, &field_obj)) {
         host = json_object_get_string(field_obj);
     }
     if ((endpoint = get_endpoint(host, api_listmodels_endpoint)) == NULL) {
-        goto term;
+        return 1;
     }
     printf("ENDPOINT: %s\n", endpoint);
     setup_curl(NULL, endpoint, print_model_list_callback);
@@ -179,10 +269,11 @@ static void print_model_list(json_object *options) {
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
-        goto term;
+        return 1;
     }
 term:
     openai_exit();
+    return 0;
 }
 
 static size_t print_model_list_callback(void *contents, size_t size, size_t nmemb, void *user_data) {

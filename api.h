@@ -19,7 +19,7 @@ typedef option_t **(*api_get_option_func_t)(void);
 /// API functions that return a string. get_default_host(), for example.
 typedef const char *(*api_get_func_t)(void);
 /// API functions that print to stdout.
-typedef void (*api_print_func_t)(json_object *options);
+typedef int (*api_print_func_t)(json_object *options);
 /// API function that queries the host.
 typedef const char *(*api_query_func_t)(json_object *options);
 
@@ -38,7 +38,7 @@ typedef struct api_interface_t {
     api_get_func_t          get_default_host;   // Get default host for AI API.
     api_get_func_t          get_default_model;  // Get default model.
     api_get_func_t          get_api_name;       // Get API name.
-    api_query_func_t        get_embeddings;     // Get embeddings.
+    api_print_func_t        get_embeddings;     // Get embeddings.
     api_print_func_t        print_model_list;   // Print list of models.
     api_query_func_t        query;              // Query the host.
 } api_interface_t;

@@ -24,6 +24,7 @@ typedef size_t (*curl_callback_t)(char *ptr, size_t size, size_t nmemb, void *us
 static const char default_host[] = "http://localhost:11434";
 static const char api_query_endpoint[] = "/api/generate";
 static const char api_listmodels_endpoint[] = "/api/tags";
+static const char api_embeddings_endpoint[] = "/api/embeddings";
 static const char default_model[] = "codellama:7b-instruct";
 
 static CURL *curl = NULL; 
@@ -39,10 +40,12 @@ static const char *get_default_host(void);
 static const char *get_default_model(void);
 static char *get_endpoint(const char *host, const char *endpoint);
 static size_t list_models_callback(char *ptr, size_t size, size_t nmemb, void *userdata);
+static int get_embeddings(json_object *options);
+static size_t get_embeddings_callback(char *ptr, size_t size, size_t nmemb, void *userdata);
 static void ollama_exit(void);
 static int ollama_init(void);
 static size_t print_curl_data(char *data, size_t len);
-static void print_model_list(json_object *options);
+static int print_model_list(json_object *options);
 static const char *query(json_object *json_obj);
 static size_t query_callback(char *ptr, size_t size, size_t nmemb, void *user_data);
 static void setup_curl(json_object *query_obj, const char *endpoint, curl_callback_t callback);
@@ -54,6 +57,7 @@ static api_interface_t ollama_api_interface = {
     .get_default_host = get_default_host,
     .get_default_model = get_default_model,
     .get_api_name = get_api_name,
+    .get_embeddings = get_embeddings,
     .print_model_list = print_model_list,
     .query = query
 };
@@ -212,29 +216,30 @@ static size_t print_curl_data(char *data, size_t len) {
     return len;
 }
 
-static void print_model_list(json_object *options) {
+static int print_model_list(json_object *options) {
     CURLcode res;
     json_object *field_obj = NULL;
     const char *host = default_host;
     char *endpoint = NULL;
     if (ollama_init()) {
-        return;
+        return 1;
     }
     if (json_object_object_get_ex(options, SETTING_KEY_AI_HOST, &field_obj)) {
         host = json_object_get_string(field_obj);
     }
     if ((endpoint = get_endpoint(host, api_listmodels_endpoint)) == NULL) {
-        goto term;
+        return 1;
     }
     setup_curl(NULL, endpoint, list_models_callback);
     printf("Models available at %s:\n", host);
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
-        goto term;
+        return 1;
     }
 term:
     ollama_exit();
+    return 0;
 }
 
 static const char *query(json_object *options) {
@@ -364,6 +369,97 @@ static size_t query_callback(char *ptr, size_t size, size_t nmemb, void *userdat
             printf("\n>> Error: %s\n", json_object_get_string(data));
             return nmemb;
         } 
+    }
+    return nmemb;
+}
+
+static int get_embeddings(json_object *settings) {
+    debug("get_embeddings()\n");
+    CURLcode res;
+    char *endpoint = NULL;
+    char *response = NULL;
+    json_object *ollama_obj = NULL;
+    json_object *embeddings_obj = NULL;
+    json_object *field_obj = NULL;
+    json_object *settings_obj = NULL;
+    json_object *system_prompt_obj = NULL;
+    const char *host = default_host;
+    const char *model = default_model;
+    const char *embeddings = NULL;
+    const char *system_prompt = NULL;
+    enum json_tokener_error jerr;
+    if (ollama_init()) {
+        return 1;
+    } 
+    if (json_object_object_get_ex(settings, SETTING_KEY_AI_HOST, &field_obj)) {
+        host = json_object_get_string(field_obj);
+    }
+    if (json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &field_obj)) {
+        prompt_str = json_object_get_string(field_obj);
+    } else {
+        jerr = json_tokener_get_error(json);
+        fprintf(stderr, "JSON parse error: %s\n", json_tokener_error_desc(jerr));
+        return 1;
+    }
+    if (json_object_object_get_ex(settings, SETTING_KEY_AI_MODEL, &field_obj)) {
+        model = json_object_get_string(field_obj);
+    }
+    query_obj = json_object_new_object();
+    if (query_obj == NULL) {
+        fprintf(stderr, "Error constructing JSON query object\n");
+        return 1;;
+    }
+    json_object_object_add(query_obj, "model", json_object_new_string(model));
+    json_object_object_add(query_obj, "prompt", json_object_new_string(prompt_str));
+    if ((endpoint = get_endpoint(host, api_embeddings_endpoint)) == NULL) {
+        return 1;
+    }
+    debug("get_embeddings() post data: %s\n", json_object_to_json_string_ext(query_obj, JSON_C_TO_STRING_PRETTY));
+    setup_curl(query_obj, endpoint, get_embeddings_callback);
+    timestamp = time(NULL);
+    res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
+        return 1;
+    }
+    fprintf(stdout, "\n");
+term:
+    ollama_exit();
+    return 0;
+}
+
+static size_t get_embeddings_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    static json_object *json_obj = NULL;
+    enum json_tokener_error jerr;
+    json_obj = json_tokener_parse_ex(json, ptr, nmemb);
+    jerr = json_tokener_get_error(json);
+    if (jerr == json_tokener_continue) {
+        return nmemb;
+    }
+    if (jerr != json_tokener_success) {
+        fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
+        return 0;
+    }
+    json_object *embeddings = json_object_object_get(json_obj, "embedding");
+    if (embeddings == NULL) {
+        return nmemb;
+    }
+    for (int i = 0, j = json_object_array_length(embeddings); i < j; i++) {
+        json_object *embedding = json_object_array_get_idx(embeddings, i);
+        if (embedding == NULL) {
+            fprintf(stderr, "Error reading embedding\n");
+            return 0;
+        }
+        const char *embedding_str = json_object_get_string(embedding);
+        if (embedding_str == NULL) {
+            fprintf(stderr, "Error reading embedding\n");
+            return 0;
+        }
+        if (i == j - 1) {
+            fprintf(stdout, "%s\n", embedding_str);
+        } else {
+            fprintf(stdout, "%s, ", embedding_str);
+        }
     }
     return nmemb;
 }
