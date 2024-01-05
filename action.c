@@ -76,20 +76,27 @@ static action_t *action_templates[] = {
     &action_query,
     NULL
 };
-static action_t **merged_actions = NULL;
+static action_t **merged_actions = action_templates;
 
 static action_t **action_merge(action_t **actions1, action_t **actions2);
 
 action_result_t action_execute_all(json_object *actions, json_object *settings) {
     debug("action_execute_all()\n");
     debug("actions: %s\n", json_object_to_json_string_ext(actions, JSON_C_TO_STRING_PRETTY));
-    action_t **a = action_templates;
     for (api_id_t i = 0; i < api_id_max; i++) {
         const api_interface_t *api_interface = api_interfaces[i + 1]();
         action_t **b = api_interface->get_actions();
-        a = action_merge(a, b);
+        if (b != NULL) {
+            action_t **c = action_merge(merged_actions, b);
+            if (c == NULL) {
+                return ACTION_ERROR;
+            }
+            if (merged_actions != action_templates) {
+                free(merged_actions);
+            }
+            merged_actions = c;
+        }
     }
-    merged_actions = a;
     json_object *json_obj = NULL;
     action_result_t result = ACTION_CONTINUE;
     for (int i = 0; merged_actions[i] != NULL; i++) {

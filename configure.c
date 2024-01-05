@@ -160,14 +160,15 @@ static option_t *common_options[] = {
     &option_v,
     NULL
 };
-static option_t **options = NULL;
+static option_t **options = common_options;
 
-static void merge_api_options(void);
+static int merge_api_options(void);
 
 int configure(json_object *actions_obj, json_object *settings_obj, int ac, char **av) {
     debug("configure()\n");
-    options = common_options;
-    merge_api_options();
+    if (merge_api_options()) {
+        return 1;
+    }
     program_name = av[0];
     if (option_parse_args(options, ac, av, actions_obj, settings_obj) != 0) {
         debug("configure() option_parse_args() failed\n");
@@ -470,7 +471,7 @@ static int option_v_validate(option_t *option, json_object *actions_obj, json_ob
     return 0;
 }
 
-static void merge_api_options(void) {
+static int merge_api_options(void) {
     debug("merge_api_options()\n");
     for (int i = 0; i < api_id_max; i++) {
         const api_interface_t *api_interface = api_get_aip_interface(i + 1);
@@ -484,9 +485,12 @@ static void merge_api_options(void) {
                             free(options);
                         }
                         options = new;
+                    } else {
+                        return 1;
                     }
                 }
             }
         }
     }
+    return 0;
 }
