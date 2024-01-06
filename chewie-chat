@@ -5,7 +5,6 @@
 # wrapper that uses chewie to implement a general-purpose chat bot.
 #
 
-
 echo "Setting up chewie-chat... "
 if [ "$CHEWIE_API" == "ollama" ]; then
 CHEWIECHAT_MODEL="llama2-uncensored:latest"
