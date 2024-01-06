@@ -128,15 +128,25 @@ static action_result_t dump_query_history(json_object *actions, json_object *set
 
 static action_result_t get_embeddings(json_object *settings, json_object *data) {
     debug("get_embeddings()\n");
-    char *query = input_get();
-    debug("settings_obj = %s\n", json_object_to_json_string_ext(settings, JSON_C_TO_STRING_PRETTY));
+    char *query = NULL;
+    json_object *prompt = NULL;
+    if (json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &prompt) && prompt != NULL) {
+        json_object_object_add(settings, SETTING_KEY_PROMPT, prompt);
+    } else {
+        query = input_get();
+        if (query != NULL) {
+            json_object_object_add(settings, SETTING_KEY_PROMPT, json_object_new_string(query));
+            free(query);
+            query = NULL;
+        }
+    }
     if (query != NULL) {
         json_object_object_add(settings, SETTING_KEY_PROMPT, json_object_new_string(query));
         free(query);
         query = NULL;
-        if (api_interface->get_embeddings(settings)) {
-            return ACTION_ERROR;
-        }
+    }
+    if (api_interface->get_embeddings(settings)) {
+        return ACTION_ERROR;
     }
     return ACTION_END;
 }
@@ -165,7 +175,7 @@ static action_result_t query(json_object *settings, json_object *data) {
     debug("query()\n");
     char *query = NULL;
     json_object *prompt = NULL;
-    if (json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &prompt)) {
+    if (json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &prompt) && prompt != NULL) {
         json_object_object_add(settings, SETTING_KEY_PROMPT, prompt);
     } else {
         query = input_get();

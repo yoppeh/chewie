@@ -140,7 +140,7 @@ static option_t option_sys = {
 static option_t option_emb = {
     .name = "emb",
     .description = "Generate embeddings for the input text.",
-    .arg_type = option_arg_none,
+    .arg_type = option_arg_optional,
     .value = NULL,
     .validate = option_emb_validate
 };
@@ -409,7 +409,7 @@ static int option_ctx_validate(option_t *option, json_object *actions_obj, json_
 
 static int option_emb_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug("option_emb_validate()\n");
-    json_object_object_add(actions_obj, ACTION_KEY_GET_EMBEDDINGS, json_object_new_boolean(true));
+    json_object_object_add(actions_obj, ACTION_KEY_GET_EMBEDDINGS, json_object_new_string(option->value));
     return 0;
 }
 
@@ -433,8 +433,13 @@ static int option_mdl_validate(option_t *option, json_object *actions_obj, json_
 static int option_qry_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug("option_qry_validate()\n");
     if (option->value != NULL) {
-        json_object_object_add(settings_obj, SETTING_KEY_PROMPT, json_object_new_string(option->value));
-        json_object_object_add(actions_obj, ACTION_KEY_QUERY, json_object_new_string(option->value));
+        if (option->value == NULL) {
+            json_object_object_add(settings_obj, SETTING_KEY_PROMPT, NULL);
+            json_object_object_add(actions_obj, ACTION_KEY_QUERY, NULL);
+        } else {
+            json_object_object_add(settings_obj, SETTING_KEY_PROMPT, json_object_new_string(option->value));
+            json_object_object_add(actions_obj, ACTION_KEY_QUERY, json_object_new_string(option->value));
+        }
     } else {
         json_object_object_add(actions_obj, ACTION_KEY_QUERY, NULL);
     }
