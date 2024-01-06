@@ -210,11 +210,7 @@ static size_t get_embeddings_callback(void *contents, size_t size, size_t nmemb,
             json_object *embedding = json_object_object_get(embedding_obj, "embedding");
             for (int i = 0, j = json_object_array_length(embedding); i < j; i++) {
                 json_object *v = json_object_array_get_idx(embedding, i);
-                if (i == j - 1) {
-                    printf("%s\n", json_object_to_json_string_ext(v, JSON_C_TO_STRING_PLAIN));
-                } else {
-                    printf("%s, ", json_object_to_json_string_ext(v, JSON_C_TO_STRING_PLAIN));
-                }
+                printf("%s\n", json_object_to_json_string_ext(v, JSON_C_TO_STRING_PLAIN));
             }
         }
     }

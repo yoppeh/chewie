@@ -455,11 +455,7 @@ static size_t get_embeddings_callback(char *ptr, size_t size, size_t nmemb, void
             fprintf(stderr, "Error reading embedding\n");
             return 0;
         }
-        if (i == j - 1) {
-            fprintf(stdout, "%s\n", embedding_str);
-        } else {
-            fprintf(stdout, "%s, ", embedding_str);
-        }
+        fprintf(stdout, "%s\n", embedding_str);
     }
     return nmemb;
 }
