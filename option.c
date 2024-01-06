@@ -99,11 +99,26 @@ static option_t *match_option(option_t **options, char *s) {
         }
     }
     for (int i = 0; options[i] != NULL; i++) {
+        char *name = NULL;
         int l = strlen(options[i]->name);
+        if (options[i]->api != NULL) {
+            l += strlen(options[i]->api) + 1;
+        }
+        name = malloc(l + 1);
+        if (name == NULL) {
+            return NULL;
+        }
+        if (options[i]->api != NULL) {
+            strcpy(name, options[i]->api);
+            strcat(name, ".");
+        } else {
+            name[0] = '\0';
+        }
+        strcat(name, options[i]->name);
         if (equal > l) {
             l = equal;
         }
-        if (strncmp(options[i]->name, s, l) == 0) {
+        if (strncmp(name, s, l) == 0) {
             return options[i];
         }
     }
@@ -116,6 +131,9 @@ void option_show_help(option_t **options) {
     printf("Options:\n");
     for (int i = 0; options[i] != NULL; i++) {
         int len = strlen(options[i]->name);
+        if (options[i]->api != NULL) {
+            len += strlen(options[i]->api) + 1;
+        }
         if (options[i]->arg_type == option_arg_required) {
             len += 7;
         } else if (options[i]->arg_type == option_arg_optional) {
@@ -127,20 +145,30 @@ void option_show_help(option_t **options) {
     }
     fld_width += 3;
     char *s = malloc(fld_width + 1);
+    char *sp = s;
     if (s == NULL) {
         return;
     }
     for (int i = 0; options[i] != NULL; i++) {
+        if (options[i]->api != NULL && (options[i]->api != options[i - 1]->api)) {
+            printf("%s API options:\n", options[i]->api);
+        }
         memset(s, '.', fld_width);
         s[fld_width] = '\0';
         int l = strlen(options[i]->name);
-        memcpy(s, options[i]->name, l);
+        if (options[i]->api != NULL) {
+            int al = strlen(options[i]->api);
+            memcpy(s, options[i]->api, al);
+            sp += al;
+            sp++;
+        }
+        memcpy(sp, options[i]->name, l);
         if (options[i]->arg_type == option_arg_required) {
-            memcpy(s + l, "=value ", 7);
+            memcpy(sp + l, "=value ", 7);
         } else if (options[i]->arg_type == option_arg_optional) {
-            memcpy(s + l, "[=value] ", 9);
+            memcpy(sp + l, "[=value] ", 9);
         } else {
-            s[l] = ' ';
+            sp[l] = ' ';
         }
         printf("    %s %s\n", s, options[i]->description);
     }

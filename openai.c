@@ -16,8 +16,11 @@
 #include "api.h"
 #include "context.h"
 #include "file.h"
+#include "option.h"
 #include "openai.h"
 #include "setting.h"
+
+#define SETTING_KEY_EMBEDDING_MODEL    "embedding_model"
 
 typedef size_t (*setup_curl_callback_t)(void *, size_t, size_t, void *);
 
@@ -27,6 +30,8 @@ static const char api_get_embeddings_endpoint[] = "/v1/embeddings";
 static const char api_listmodels_endpoint[] = "/v1/models";
 static const char default_model[] = "gpt-3.5-turbo";
 static const char auth_prefix[] = "Authorization: Bearer ";
+static const char default_embedding_model[] = "text-embedding-ada-002";
+static const char ai_provider[] = "openai";
 
 static CURL *curl = NULL;
 static struct json_tokener *json = NULL;
@@ -56,6 +61,8 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
 static json_object *query_get_history(json_object *options);
 static void setup_curl(json_object *json_obj, const char *endpoint, setup_curl_callback_t callback);
 static int string_compare(const void *a, const void *b);
+static int option_emd_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
+static int set_missing_emd(option_t *option, json_object *actions_obj, json_object *settings_obj);
 
 static api_interface_t openai_api_interface = {
     .get_actions = get_actions,
@@ -68,6 +75,21 @@ static api_interface_t openai_api_interface = {
     .query = query
 };
 
+static option_t option_emd = {
+    .name = "emd",
+    .description = "Set the language model for embeddings.",
+    .arg_type = option_arg_required,
+    .value = NULL,
+    .validate = option_emd_validate,
+    .set_missing = set_missing_emd,
+    .api = ai_provider
+};
+
+static option_t *options[] = {
+    &option_emd,
+    NULL
+};
+
 const char *get_access_token(void) {
     return getenv("OPENAI_API_KEY");
 }
@@ -77,7 +99,7 @@ const api_interface_t *openai_get_aip_interface(void) {
 }
 
 static const char *get_api_name(void) {
-    return "openai";
+    return ai_provider;
 }
 
 static action_t **get_actions(void) {
@@ -85,7 +107,7 @@ static action_t **get_actions(void) {
 }
 
 static option_t **get_options(void) {
-    return NULL;
+    return options;
 }
 
 static const char *get_default_host(void) {
@@ -140,7 +162,7 @@ static int get_embeddings(json_object *settings) {
         return 1;
     }
     json_object_object_add(query_obj, "input", json_object_object_get(settings, SETTING_KEY_PROMPT));
-    json_object_object_add(query_obj, "model", json_object_object_get(settings, SETTING_KEY_AI_MODEL));
+    json_object_object_add(query_obj, "model", json_object_object_get(settings, SETTING_KEY_EMBEDDING_MODEL));
     setup_curl(query_obj, endpoint, get_embeddings_callback);
     debug("openai get_embeddings: %s\n", json_object_to_json_string_ext(query_obj, JSON_C_TO_STRING_PLAIN));
     res = curl_easy_perform(curl);
@@ -543,4 +565,53 @@ static void setup_curl(json_object *query_obj, const char *endpoint, setup_curl_
 
 static int string_compare(const void *a, const void *b) {
     return strcmp(*(char **)a, *(char **)b);
+}
+
+static int option_emd_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
+    debug("option_emd_validate()\n");
+    json_object_object_add(settings_obj, SETTING_KEY_EMBEDDING_MODEL, json_object_new_string(option->value));
+    json_object *openai_obj = context_get(ai_provider);
+    if (openai_obj == NULL) {
+        openai_obj = json_object_new_object();
+        if (openai_obj == NULL) {
+            fprintf(stderr, "Error creating new JSON object\n");
+            return 1;
+        }
+    }
+    json_object_object_add(openai_obj, SETTING_KEY_EMBEDDING_MODEL, json_object_new_string(option->value));
+    context_set(ai_provider, openai_obj);
+    return 0;
+}
+
+static int set_missing_emd(option_t *option, json_object *actions_obj, json_object *settings_obj) {
+    debug("set_missing_emd()\n");
+    json_object *value;
+    json_object *openai_obj = context_get(ai_provider);
+    if (json_object_object_get_ex(settings_obj, SETTING_KEY_EMBEDDING_MODEL, &value)) {
+        debug("    openai embedding model is set to %s\n", json_object_get_string(value));
+        return 0;
+    }
+    const char *m = NULL;
+    if (openai_obj != NULL) {
+        json_object_object_get_ex(openai_obj, SETTING_KEY_EMBEDDING_MODEL, &value);
+        if (value != NULL) {
+            m = json_object_get_string(value);
+        }
+    }
+    if (m == NULL) {
+        m = default_embedding_model;
+    }
+    debug("    model in context file is %s\n", m);
+    json_object_object_add(settings_obj, SETTING_KEY_EMBEDDING_MODEL, json_object_new_string(m));
+    if (openai_obj == NULL) {
+        openai_obj = json_object_new_object();
+        if (openai_obj == NULL) {
+            fprintf(stderr, "Error creating new JSON object\n");
+            return 1;
+        }
+    }
+    json_object_object_add(openai_obj, SETTING_KEY_EMBEDDING_MODEL, json_object_new_string(m));
+    debug("    wrote %s to context file\n", json_object_to_json_string_ext(openai_obj, JSON_C_TO_STRING_PRETTY));
+    context_set(ai_provider, openai_obj);
+    return 0;
 }

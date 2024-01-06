@@ -81,6 +81,10 @@ Update the context file and exit.
 
 Display the `chewie` version and exit.
 
+`openai.emd="embedding model"`
+
+openai uses a different set of models for generating embeddings than those used for generating completions. This option allows setting the model to use for generating embeddings. See the [openai documentation](https://platform.openai.com/docs/guides/embeddings) for a list of acceptable values. The default is `text-embedding-ada-002`.
+
 ## Environment Variables
 
 `CHEWIE_AI_PROVIDER`

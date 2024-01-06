@@ -26,7 +26,9 @@ typedef enum option_arg_t {
 /// option_set_missing() function should be called after option_parse_args().
 /// It will scan all option_t structures and call set_missing() for each one
 /// that wasn't specified on the command-line. The supplied set_missing() 
-/// function should return 0 on success or 1 on error.
+/// function should return 0 on success or 1 on error. For api-specific options,
+/// the api field should be set to the same api name that is returned by the
+/// api_get_name() function.
 typedef struct option_t {
     const char *name;
     const char *description;
@@ -34,6 +36,7 @@ typedef struct option_t {
     const char *value;
     int (*validate)(struct option_t *option, json_object *actions_obj, json_object *setting_obj);
     int (*set_missing)(struct option_t *option, json_object *actions_obj, json_object *setting_obj);
+    const char *api;
     bool present;
 } option_t;
 

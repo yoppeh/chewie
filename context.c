@@ -262,10 +262,13 @@ int64_t context_get_history_timestamp(json_object *entry) {
 
 int context_set(const char *field, json_object *obj) {
     debug("context_set(\"%s\", %p)\n", field, obj);
-    if (context_obj == NULL) {
+    if (context_obj == NULL || obj == NULL || field == NULL) {
         return 1;
     }
-    json_object_object_add(context_obj, field, obj);
+    if (json_object_object_add(context_obj, field, json_object_get(obj))) {
+        fprintf(stderr, "Error adding field \"%s\" to context object\n", field);
+        return 1;
+    }
     return 0;
 }
 
@@ -339,8 +342,10 @@ int context_set_system_prompt(const char *s) {
 
 void context_update(void) {
     debug("context_update()\n");
-    debug("writing context file \"%s\"\n", context_fn);
-    file_write(context_fn, json_object_to_json_string_ext(context_obj, JSON_C_TO_STRING_PRETTY));
+    debug("    writing context file \"%s\"\n", context_fn);
+    const char *s = json_object_to_json_string_ext(context_obj, JSON_C_TO_STRING_PRETTY);
+    debug("    context: \"%s\"\n", s);
+    file_write(context_fn, s);
 }
 
 json_object *read_context_file(const char *fn) {

@@ -481,7 +481,7 @@ static int merge_api_options(void) {
                 if (api_options != NULL) {
                     option_t **new = option_merge(options, api_options);
                     if (new != NULL) {
-                        if (options != NULL) {
+                        if (options != NULL && options != common_options) {
                             free(options);
                         }
                         options = new;
