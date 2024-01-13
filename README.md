@@ -176,3 +176,7 @@ To use this script, first run it with `qc -s`. This will cause qcc to initialize
 `qg` is an example script that provides a convenience command for querying `chewie` about git usage. It uses the `codellama:7b-instruct` on ollama and the context file is specified as `~/.cache/chewie/qg-context.json`.
 
 To use this script, first run it with `qg -s`. This will cause `qg` to initialize `qg-context.json` with a prompt that will help keep `chewie` on-topic. After that, you can use something like `qg "What is rebasing?"`. `qg` (`chewie`) will remember the conversation history and take it into account when answering further questions. You can use this script as an example for making other topic-specific scripts.
+
+## Hacking
+
+chewie uses libcurl and json-c to interact with the AI provider APIs. Queries and embeddings requests are packaged up into a JSON object that is sent via curl to the provider API, responses are returned in JSON. Since json-c is there, chewie also uses it for other areas. Context file information is maintained in a JSON object. When command line options are parsed, those generate configuration and action data that is stored in the settings JSON object and the actions JSON object. After the command line is parsed, the actions that were stored in the actions object are executed. The settings object is used while executing actions to get things like the AI provider URL, model name, etc.
