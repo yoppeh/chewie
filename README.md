@@ -4,9 +4,9 @@ A simple command-line utility for querying an AI API.
 
 chewie takes input from stdin and submits it to a backend AI API. The response is then printed to stdout. For each query, a context file can be specified. The context file tracks the entire conversation since the first creation of the file. Multiple chat threads can be maintained this way, just by specifying different context files in each call. chewie also has a command line option `his` to reprint the entire conversation history. Context files can be reset to a fresh start using the `r` option.
 
-Currently, [`ollama`](https://ollama.ai/) and [`openai`](https://platform.openai.com/docs/overview) are supported as the AI provider. In the case of [Ollama](https://ollama.ai/), that API supports submitting the vectorized context along with the query. With [OpenAI](https://platform.openai.com/docs/overview), the chat history is sent back to the server with every query.
+Currently, [`ollama`](https://ollama.ai/) and [`openai`](https://platform.openai.com/docs/overview) are supported as the AI provider. In the case of [`Ollama`](https://ollama.ai/), that API supports submitting the vectorized context along with the query. With [`OpenAI`](https://platform.openai.com/docs/overview), the chat history is sent back to the server with every query.
 
-An example Ollama session using the `codellama:34b-instruct` model (the `r` parameter resets the context, so it starts fresh):
+An example `Ollama` session using the `codellama:34b-instruct` model (the `r` parameter resets the context, so it starts fresh):
 
 ```bash
 warren@morbius:~/dev/chewie > echo "Show me the prologue to Star Wars." | ./chewie r ctx="starwars-context.json"
@@ -18,7 +18,7 @@ warren@morbius:~/dev/chewie > echo "Can you tell me who wrote it?" | ./chewie ct
   The prologue of Star Wars was written by George Lucas, the creator of the Star Wars franchise. He is a filmmaker and writer who is known for his work on the original trilogy as well as the prequel and sequel trilogies. Lucas is also credited with developing the concept of the franchise and creating many of its iconic characters and stories
 ```
 
-As you can see, Ollama remembered what the conversation was about. As a side note, there are other language models provided for Ollama that did show the full prologue text ;).
+As you can see, `Ollama` remembered what the conversation was about. As a side note, there are other language models provided for `Ollama` that did show the full prologue text ;).
 
 ## Options
 
@@ -52,8 +52,8 @@ Print the help information for these command options, then exit.
 
 Language model to use. Give ? as "model" to list available models for the backend. The default model depends on the API:
 
-For [Ollama](https://ollama.ai/): `"codellama:13b-instruct"`
-For [OpenAI](https://platform.openai.com/docs/): "gpt-3.5-turbo"
+For [`Ollama`](https://ollama.ai/): `"codellama:13b-instruct"`
+For [`OpenAI`](https://platform.openai.com/docs/): "gpt-3.5-turbo"
 
 This can also be set with the environment variable `CHEWIE_MODEL`
 
@@ -99,9 +99,9 @@ Specify the path/filename of the context file to use for the query. The context 
 
 Language model to use. The default model depends on the API:
 
-For [Ollama](https://ollama.ai/): `"codellama:7b-instruct"`
+For [`Ollama`](https://ollama.ai/): `"codellama:7b-instruct"`
 
-For [OpenAI](https://platform.openai.com/docs/): `"gpt-3.5-turbo"`
+For [`OpenAI`](https://platform.openai.com/docs/): `"gpt-3.5-turbo"`
 
 This can also be set with the command line option `mdl=`
 
@@ -117,7 +117,7 @@ If this variable is not set and no url is given on the command line, then the de
 
 `OPENAI_API_KEY`
 
-This is required for using OpenAI. You will need an account and access token, that should be assigned to this environment variable. Keep in mind, OpenAI queries incur charges.
+This is required for using OpenAI. You will need an account and access token, that should be assigned to this environment variable. Keep in mind, `OpenAI` queries incur charges.
 
 ## Building
 
@@ -140,7 +140,7 @@ For example, on Mac OS, I used MacPorts to install libcurl and json-c. MacPorts 
 ## Scripts
 
 These scripts setup contexts for specific tasks. Mostly included for reference. These will use whichever API is specified in
-the `CHEWIE_API` environment variable. If that isn't set, `ollama` will be used. The model used by the script will depend on the API. For `openai`, generally `gpt-3.5-turbo` will be used. For ollama, different models are used which are tuned to the task.
+the `CHEWIE_API` environment variable. If that isn't set, `ollama` will be used. The model used by the script will depend on the API. For `openai`, generally `gpt-3.5-turbo` will be used. For `ollama`, different models are used which are tuned to the task.
 
 ### chewie-chat
 
@@ -153,7 +153,7 @@ Chewie > This is a bash script called chewie-chat, which uses chewie to implemen
 
 ### eliza
 
-`eliza` is an improved version of the ['60's program ELIZA](https://en.wikipedia.org/wiki/ELIZA), which simulated a psychotherapy session with the user. This version uses the `samantha-mistral:7b-text-q8_0` language model for ollama, which has been trained for interpersonal communications. `eliza` acts as a trusted friend that will give you advice. Since the model eliza uses was trained as "samantha", `eliza` is confused about her own name.
+`eliza` is an improved version of the '60's program [ELIZA](https://en.wikipedia.org/wiki/ELIZA), which simulated a psychotherapy session with the user. This version uses the `samantha-mistral:7b-text-q8_0` language model for `ollama`, which has been trained for interpersonal communications. `eliza` acts as a trusted friend that will give you advice. Since the model `eliza` uses was trained as "samantha", `eliza` is confused about her own name.
 
 To use `eliza`, first run it with `eliza -s`. This will cause eliza to initialize an `eliza-context.json` with a prompt that will help keep her on target, though she does get a little over-verbose anyway. After that, you can ask eliza for general advice.
 
@@ -161,19 +161,19 @@ For entertainment purposes only.
 
 ### qb
 
-`qb` is an example script that provides a convenience command for querying `chewie` about bash on Linux. It uses the `codellama:7b-instruct` for ollama and the context file is specified as `~/.cache/chewie/qb-context.json`.
+`qb` is an example script that provides a convenience command for querying `chewie` about bash on Linux. It uses the `codellama:7b-instruct` for `ollama` and the context file is specified as `~/.cache/chewie/qb-context.json`.
 
 To use this script, first run it with `qb -s`. This will cause qb to initialize `qb-context.json` with a prompt that will help keep `chewie` on-topic. After that, you can use something like `qb "How do I find all .c files on my system?"`. `qb` (`chewie`) will remember the conversation history and take it into account when answering further questions. You can use this script as an example for making other topic-specific scripts.
 
 ### qc
 
-`qc` is an example script that provides a convenience command for querying `chewie` about c programming on Linux. It uses the `codellama:7b-instruct` for ollama and the context file is specified as `~/.cache/chewie/qc-context.json`.
+`qc` is an example script that provides a convenience command for querying `chewie` about c programming on Linux. It uses the `codellama:7b-instruct` for `ollama` and the context file is specified as `~/.cache/chewie/qc-context.json`.
 
 To use this script, first run it with `qc -s`. This will cause qcc to initialize `qc-context.json` with a prompt that will help keep `chewie` on-topic. After that, you can use something like `qc "What is the prototype for the strcmp() function?"`. `qc` (`chewie`) will remember the conversation history and take it into account when answering further questions. You can use this script as an example for making other topic-specific scripts.
 
 ### qg
 
-`qg` is an example script that provides a convenience command for querying `chewie` about git usage. It uses the `codellama:7b-instruct` on ollama and the context file is specified as `~/.cache/chewie/qg-context.json`.
+`qg` is an example script that provides a convenience command for querying `chewie` about git usage. It uses the `codellama:7b-instruct` on `ollama` and the context file is specified as `~/.cache/chewie/qg-context.json`.
 
 To use this script, first run it with `qg -s`. This will cause `qg` to initialize `qg-context.json` with a prompt that will help keep `chewie` on-topic. After that, you can use something like `qg "What is rebasing?"`. `qg` (`chewie`) will remember the conversation history and take it into account when answering further questions. You can use this script as an example for making other topic-specific scripts.
 
