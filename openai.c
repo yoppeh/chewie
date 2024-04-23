@@ -76,7 +76,7 @@ static api_interface_t openai_api_interface = {
 };
 
 static option_t option_emd = {
-    .name = "emd",
+    .name = "openai.emd",
     .description = "Set the language model for embeddings.",
     .arg_type = option_arg_required,
     .value = NULL,

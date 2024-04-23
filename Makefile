@@ -61,13 +61,13 @@ clean:
 	- rm -f *.o
 
 action.o : chewie.h action.h api.h configure.h context.h file.h setting.h
-api.o : chewie.h api.h ollama.h openai.h
+api.o : chewie.h groq.h api.h ollama.h openai.h
 configure.o : chewie.h action.h api.h configure.h context.h file.h option.h
 context.o : chewie.h context.h file.h
 file.o : chewie.h file.h
 groq.o : chewie.h api.h context.h file.h groq.h setting.h
 input.o : chewie.h file.h input.h
-main.o : chewie.h action.h configure.h context.h file.h input.h ollama.h openai.h
+main.o : chewie.h action.h configure.h context.h file.h groq.h input.h ollama.h openai.h
 ollama.o : chewie.h api.h context.h file.h ollama.h setting.h
 openai.o : chewie.h api.h context.h file.h openai.h setting.h
 option.o : chewie.h configure.h option.h
@@ -81,7 +81,7 @@ endif
 %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-install: chewie chewie-chat eliza qb qc qg
+install: chewie chewie-chat eliza qb qc qg qn
 	mkdir -p ~/.cache/chewie
 	install -m 755 chewie $(prefix)/bin
 	install -m 755 chewie-chat $(prefix)/sbin 
@@ -89,6 +89,7 @@ install: chewie chewie-chat eliza qb qc qg
 	install -m 755 qb $(prefix)/sbin
 	install -m 755 qc $(prefix)/sbin
 	install -m 755 qg $(prefix)/sbin
+	install -m 755 qn $(prefix)/sbin
 
 uninstall:
 	- rm -rf ~/.cache/chewie
@@ -98,4 +99,5 @@ uninstall:
 	- rm -f $(prefix)/sbin/qb
 	- rm -f $(prefix)/sbin/qc
 	- rm -f $(prefix)/sbin/qg
+	- rm -f $(prefix)/sbin/qn
 

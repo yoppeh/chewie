@@ -199,6 +199,7 @@ static int set_missing_aih(option_t *option, json_object *actions_obj, json_obje
     debug("set_missing_aih()\n");
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_HOST, &value)) {
+        debug("\taih set on command line to %s\n", json_object_get_string(value));
         return 0;
     }
     char *host = NULL;
@@ -227,6 +228,7 @@ static int set_missing_aih(option_t *option, json_object *actions_obj, json_obje
         }
     }
     if (host != NULL) {
+        debug("setting aih to %s\n", host);
         json_object_object_add(settings_obj, SETTING_KEY_AI_HOST, json_object_new_string(host));
         free(host);
     } else {
@@ -240,6 +242,7 @@ static int set_missing_aip(option_t *option, json_object *actions_obj, json_obje
     debug("set_missing_aip()\n");
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_PROVIDER, &value)) {
+        debug("\taip set on command line to %s\n", json_object_get_string(value));
         return 0;
     }
     api_id_t id = api_id_default;
@@ -256,6 +259,7 @@ static int set_missing_aip(option_t *option, json_object *actions_obj, json_obje
     }
     const api_interface_t *api_interface = api_get_aip_interface(id);
     char *api_name = (char *)api_interface->get_api_name();
+    debug("\tsetting aip to %s\n", api_name);
     json_object_object_add(settings_obj, SETTING_KEY_AI_PROVIDER, json_object_new_string(api_name));
     return 0;
 }
@@ -266,6 +270,7 @@ static int set_missing_ctx(option_t *option, json_object *actions_obj, json_obje
     json_object *value;
     int result = 1;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_CONTEXT_FILENAME, &value)) {
+        debug("\tcontext filename set on command line to %s\n", json_object_get_string(value));
         context_fn = strdup(json_object_get_string(value));
         result = 0;
         goto term;
@@ -274,6 +279,7 @@ static int set_missing_ctx(option_t *option, json_object *actions_obj, json_obje
         context_fn = strdup(getenv(ENV_KEY_CONTEXT_FILENAME));
         if (context_fn == NULL) printf("context filename not set in env\n");
         if (context_fn != NULL) {
+            debug("\tsetting context filename to %s from environment variable %s\n", context_fn, ENV_KEY_CONTEXT_FILENAME);
             json_object_object_add(settings_obj, SETTING_KEY_CONTEXT_FILENAME, json_object_new_string(context_fn));
             result = 0;
             goto term;
@@ -300,6 +306,7 @@ static int set_missing_ctx(option_t *option, json_object *actions_obj, json_obje
     }
     strcat(context_fn, "/");
     strcat(context_fn, context_fn_default);
+    debug("\tsetting context filename to %s\n", context_fn);
     json_object_object_add(settings_obj, SETTING_KEY_CONTEXT_FILENAME, json_object_new_string(context_fn));
     result = 0;
 term:

@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# qn
+#
+# script that uses chewie to implement a nixos-specific chat bot.
+#
+
+if [ "$CHEWIE_API" == "ollama" ]; then
+QN_MODEL="codellama:7b-instruct"
+elif [ "$CHEWIE_API" == "openai" ]; then
+QN_MODEL="gpt-3.5-turbo"
+elif [ "$CHEWIE_API" == "groq" ]; then
+QN_MODEL="llama3-8b-8192"
+else
+CHEWIE_API="ollama"
+fi
+
+QN_CONTEXT_PATH=~/.cache/chewie
+QN_CONTEXT=$QN_CONTEXT_PATH/qn-context.json
+
+if [ "$1" == "-h" ] ; then
+    echo "Usage: qn [options]"
+    echo "Options:"
+    echo "  -h  Display this help message."
+    echo "  -s  Setup (or reset) qn."
+    exit 0
+fi
+
+if [ "$1" == "-s" ] ; then
+    echo "Setting up chewie... "
+    echo "Using API \"$CHEWIE_API\""
+    echo "Using model \"$QN_MODEL\""
+    echo "Using context file \"$QN_CONTEXT\""
+    mkdir -p $QN_CONTEXT_PATH
+    chewie r u ctx="$QN_CONTEXT" mdl="$QN_MODEL" sys="You are an intelligent assistant helping me use NixOS. All of your responses should be in the context of using NixOS. If you do not know the answer to a question, just say \"I don\'t know\"." > /dev/null
+    echo "done!"
+    exit 0
+fi
+
+printf "%q" "$@" | chewie ctx="$QN_CONTEXT" mdl="$QN_MODEL"

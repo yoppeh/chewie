@@ -76,7 +76,7 @@ static api_interface_t groq_api_interface = {
 };
 
 static option_t option_emd = {
-    .name = "emd",
+    .name = "groq.emd",
     .description = "Set the language model for embeddings.",
     .arg_type = option_arg_required,
     .value = NULL,
@@ -462,6 +462,7 @@ static json_object *query_get_history(json_object *options) {
     json_object *context_history_obj = NULL;
     json_object *field_obj = NULL;
     json_object *new_entry;
+    json_object *prompt_obj = NULL;
     array_list *context_history_array = NULL;
     bool system_prompt = false;
     int context_history_count = 0;
@@ -526,9 +527,13 @@ static json_object *query_get_history(json_object *options) {
             fprintf(stderr, "Error creating new JSON object\n");
             return NULL;
         }
-        json_object_object_add(new_entry, "role", json_object_new_string("user"));
-        json_object_object_add(new_entry, "content", json_object_object_get(options, SETTING_KEY_PROMPT));
-        json_object_array_add(history_obj, new_entry);
+        prompt_obj = json_object_object_get(options, SETTING_KEY_PROMPT);
+        if (prompt_obj != NULL) {
+            json_object_object_add(new_entry, "role", json_object_new_string("user"));
+            json_object_object_add(new_entry, "content", prompt_obj);
+            printf("\t%s\n", json_object_to_json_string_ext(new_entry, JSON_C_TO_STRING_PRETTY));
+            json_object_array_add(history_obj, new_entry);
+        }
     }
     return history_obj;
 }
