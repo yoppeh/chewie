@@ -9,6 +9,8 @@ if [ "$CHEWIE_API" == "ollama" ]; then
 ELIZA_MODEL="samantha-mistral:7b-text-q8_0"
 elif [ "$CHEWIE_API" == "openai" ]; then
 ELIZA_MODEL="gpt-3.5-turbo"
+elif [ "$CHEWIE_API" == "groq" ]; then
+ELIZA_MODEL="llama3-8b-8192"
 else
 CHEWIE_API="ollama"
 ELIZA_MODEL="samantha-mistral:7b-text-q8_0"

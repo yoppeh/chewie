@@ -8,6 +8,7 @@
 
 #include "api.h"
 
+#include "groq.h"
 #include "ollama.h"
 #include "openai.h"
 
@@ -19,7 +20,8 @@
 const get_api_interface_func_t api_interfaces[] = {
     NULL,
     ollama_get_aip_interface,
-    openai_get_aip_interface
+    openai_get_aip_interface,
+    groq_get_aip_interface
 };
 api_interface_t *api_interface;
 

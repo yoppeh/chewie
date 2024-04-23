@@ -9,6 +9,8 @@ if [ "$CHEWIE_API" == "ollama" ]; then
 QC_MODEL="codellama:7b-instruct"
 elif [ "$CHEWIE_API" == "openai" ]; then
 QC_MODEL="gpt-3.5-turbo"
+elif [ "$CHEWIE_API" == "groq" ]; then
+QC_MODEL="llama-8b-8192"
 else
 QC_MODEL="codellama:7b-instruct"
 CHEWIE_API="ollama"

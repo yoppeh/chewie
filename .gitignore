@@ -53,7 +53,10 @@ Mkfile.old
 dkms.conf
 
 # ide
+compile_commands.json
 .vscode
 
 # program data files
 *.json
+
+.cache

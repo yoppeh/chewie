@@ -28,7 +28,8 @@ typedef enum api_id_t {
     api_id_none = 0,
     api_id_ollama = 1,
     api_id_openai = 2,
-    api_id_max = api_id_openai,
+    api_id_groq = 3,
+    api_id_max = api_id_groq,
     api_id_default = api_id_ollama
 } api_id_t;
 /// API interface.

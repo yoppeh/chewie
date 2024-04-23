@@ -50,7 +50,7 @@ endif
 
 LIBS = -lcurl -ljson-c
 
-OBJS = main.o action.o api.o configure.o context.o file.o input.o ollama.o openai.o option.o
+OBJS = main.o action.o api.o configure.o context.o file.o groq.o input.o ollama.o openai.o option.o
 
 .PHONY: all clean install uninstall
 
@@ -65,6 +65,7 @@ api.o : chewie.h api.h ollama.h openai.h
 configure.o : chewie.h action.h api.h configure.h context.h file.h option.h
 context.o : chewie.h context.h file.h
 file.o : chewie.h file.h
+groq.o : chewie.h api.h context.h file.h groq.h setting.h
 input.o : chewie.h file.h input.h
 main.o : chewie.h action.h configure.h context.h file.h input.h ollama.h openai.h
 ollama.o : chewie.h api.h context.h file.h ollama.h setting.h

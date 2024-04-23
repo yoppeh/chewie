@@ -12,6 +12,9 @@ echo "Using ollama API"
 elif [ "$CHEWIE_API" == "openai" ]; then
 CHEWIECHAT_MODEL="gpt-3.5-turbo"
 echo "Using OpenAI API"
+elif [ "$CHEWIE_API" == "groq" ] ; then
+echo "Using Groq API"
+CHEWIECHAT_MODEL="llama3-8b-8192"
 else
 CHEWIE_API=ollama
 CHEWIECHAT_MODEL="llama2-uncensored:latest"
