@@ -76,7 +76,7 @@ static api_interface_t groq_api_interface = {
 };
 
 static option_t option_emd = {
-    .name = "groq.emd",
+    .name = "emd",
     .description = "Set the language model for embeddings.",
     .arg_type = option_arg_required,
     .value = NULL,
@@ -569,7 +569,15 @@ static int string_compare(const void *a, const void *b) {
 }
 
 static int option_emd_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
+    json_object *api_object = NULL;
     debug("option_emd_validate()\n");
+    if (!json_object_object_get_ex(settings_obj, SETTING_KEY_AI_PROVIDER, &api_object)) {
+        fprintf(stderr, "Error getting AI provider from settings\n");
+        return 1;
+    }
+    if (api_object == NULL || strcmp(json_object_get_string(api_object), ai_provider) != 0) {
+        return 1;
+    }
     json_object_object_add(settings_obj, SETTING_KEY_EMBEDDING_MODEL, json_object_new_string(option->value));
     json_object *groq_obj = context_get(ai_provider);
     if (groq_obj == NULL) {

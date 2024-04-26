@@ -145,11 +145,12 @@ void option_show_help(option_t **options) {
     }
     fld_width += 3;
     char *s = malloc(fld_width + 1);
-    char *sp = s;
+    char *sp;
     if (s == NULL) {
         return;
     }
     for (int i = 0; options[i] != NULL; i++) {
+        sp = s;
         if (options[i]->api != NULL && (options[i]->api != options[i - 1]->api)) {
             printf("%s API options:\n", options[i]->api);
         }
@@ -163,12 +164,13 @@ void option_show_help(option_t **options) {
             sp++;
         }
         memcpy(sp, options[i]->name, l);
+        sp += l;
         if (options[i]->arg_type == option_arg_required) {
-            memcpy(sp + l, "=value ", 7);
+            memcpy(sp, "=value ", 7);
         } else if (options[i]->arg_type == option_arg_optional) {
-            memcpy(sp + l, "[=value] ", 9);
+            memcpy(sp, "[=value] ", 9);
         } else {
-            sp[l] = ' ';
+            *sp = ' ';
         }
         printf("    %s %s\n", s, options[i]->description);
     }
