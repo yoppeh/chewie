@@ -145,12 +145,11 @@ void option_show_help(option_t **options) {
     }
     fld_width += 3;
     char *s = malloc(fld_width + 1);
-    char *sp;
     if (s == NULL) {
         return;
     }
     for (int i = 0; options[i] != NULL; i++) {
-        sp = s;
+        char *sp = s;
         if (options[i]->api != NULL && (options[i]->api != options[i - 1]->api)) {
             printf("%s API options:\n", options[i]->api);
         }
