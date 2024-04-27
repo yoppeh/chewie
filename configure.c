@@ -279,7 +279,8 @@ static int set_missing_ctx(option_t *option, json_object *actions_obj, json_obje
     }
     if (getenv(ENV_KEY_CONTEXT_FILENAME) != NULL) {
         context_fn = strdup(getenv(ENV_KEY_CONTEXT_FILENAME));
-        if (context_fn == NULL) printf("context filename not set in env\n");
+        if (context_fn == NULL) 
+            debug("context filename not set in env\n");
         if (context_fn != NULL) {
             debug("setting context filename to %s from environment variable %s\n", context_fn, ENV_KEY_CONTEXT_FILENAME);
             json_object_object_add(settings_obj, SETTING_KEY_CONTEXT_FILENAME, json_object_new_string(context_fn));

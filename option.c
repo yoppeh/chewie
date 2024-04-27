@@ -9,9 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "api.h"
 #include "chewie.h"
 #include "configure.h"
 #include "option.h"
+#include "setting.h"
 
 static option_t *match_option(option_t **options, char *s);
 
@@ -85,10 +87,18 @@ int option_parse_args(option_t **options, int ac, char **av, json_object *action
 
 int option_set_missing(option_t **options, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
+    json_object *api_opt = NULL;
+    api_id_t api = api_id_none;
+    if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_PROVIDER, &api_opt)) {
+        api = api_name_to_id(json_object_get_string(api_opt));
+    }
     for (int i = 0; options[i] != NULL; i++) {
         if (options[i]->set_missing != NULL) {
-            if (options[i]->set_missing(options[i], actions_obj, settings_obj) != 0) {
-                debug_exit 1;
+            api_id_t opt_api = api_name_to_id(options[i]->api);
+            if (options[i]->api == NULL || opt_api == api) {
+                if (options[i]->set_missing(options[i], actions_obj, settings_obj) != 0) {
+                    debug_exit 1;
+                }
             }
         }
     }

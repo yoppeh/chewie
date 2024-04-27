@@ -344,7 +344,7 @@ void context_update(void) {
     debug_enter();
     debug("writing context file \"%s\"\n", context_fn);
     const char *s = json_object_to_json_string_ext(context_obj, JSON_C_TO_STRING_PRETTY);
-    debug("context: \"%s\"\n", s);
+    debug("context:\n\"%s\"\n", s);
     file_write(context_fn, s);
     debug_exit;
 }

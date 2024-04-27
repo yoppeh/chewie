@@ -115,7 +115,6 @@ action_result_t action_execute_all(json_object *actions, json_object *settings) 
             }
         } 
     }
-    debug("action_execute_all() done\n");
     debug_exit result;
 }
 

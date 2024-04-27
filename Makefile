@@ -70,7 +70,7 @@ input.o : chewie.h file.h input.h
 main.o : chewie.h action.h configure.h context.h file.h groq.h input.h ollama.h openai.h
 ollama.o : chewie.h api.h context.h file.h ollama.h setting.h
 openai.o : chewie.h api.h context.h file.h openai.h setting.h
-option.o : chewie.h configure.h option.h
+option.o : chewie.h api.h configure.h option.h setting.h
 
 chewie : $(OBJS)
 	$(CC) $(LDFLAGS) $(LIBS) $^ -o $@
