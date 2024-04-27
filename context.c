@@ -37,14 +37,14 @@ static json_object *read_context_file(const char *fn);
 static int write_context_file(const char *fn, json_object *context_obj);
 
 void context_add_history(const char *prompt, const char *response, const int64_t timestamp) {
-    debug("context_add_history()\n");
+    debug_enter();
     json_object *history_obj = NULL;
     json_object *new_entry = NULL;
     json_object *prompt_obj = NULL;
     json_object *response_obj = NULL;
     json_object *timestamp_obj = NULL;
     if (context_obj == NULL) {
-        return;
+        debug_exit;
     }
     if (!json_object_object_get_ex(context_obj, CONTEXT_KEY_HISTORY, &history_obj)) {
         history_obj = json_object_new_array();
@@ -74,55 +74,56 @@ void context_add_history(const char *prompt, const char *response, const int64_t
     if (new_entry != NULL) {
         json_object_array_add(history_obj, new_entry);
     }
+    debug_exit;
 }
 
 json_object *context_get(const char *field) {
-    debug("context_get()\n");
+    debug_enter();
     json_object *result = NULL;
     if (context_obj == NULL) {
-        return NULL;
+        debug_exit NULL;
     }
     json_object_object_get_ex(context_obj, field, &result);
-    return result;
+    debug_exit result;
 }
 
 void context_load(const char *fn) {
-    debug("context_load()\n");
+    debug_enter();
     if (fn != NULL) {
         context_fn = strdup(fn);
         context_obj = read_context_file(fn);
         if (context_obj != NULL) {
-            return;
+            debug_exit;
         }
     }
-    debug("context_load(): creating new context_obj\n");
+    debug("creating new context_obj\n");
     context_obj = json_object_new_object();
-    return;
+    debug_exit;
 }
 
 void context_new(const char *fn) {
-    debug("context_new()\n");
+    debug_enter();
     context_fn = fn;
-    debug("context_new(): creating new context_obj\n");
+    debug("creating new context_obj\n");
     context_obj = json_object_new_object();
-    return;
+    debug_exit;
 }
 
 int context_delete_system_prompt(void) {
-    debug("context_delete_system_prompt()\n");
+    debug_enter();
     if (context_obj == NULL) {
-        return 1;
+        debug_exit 1;
     }
     json_object_object_del(context_obj, CONTEXT_KEY_SYSTEM_PROMPT);
-    return 0;
+    debug_exit 0;
 }
 
 int context_dump_history(void) {
-    debug("context_dump_history()\n");
+    debug_enter();
     int result = 1;
     if (context_obj == NULL) {
         fprintf(stderr, "Error parsing context file\n");
-        return 1;
+        debug_exit 1;
     }
     json_object *history_obj = NULL;
     json_object_object_get_ex(context_obj, CONTEXT_KEY_HISTORY, &history_obj);
@@ -161,30 +162,29 @@ int context_dump_history(void) {
     }
     result = 0;
 term:
-    return result;
+    debug_exit result;
 }
 
 const char *context_get_ai_host(void) {
-    debug("context_get_ai_host()\n");
+    debug_enter();
     json_object *ai_host_obj = NULL;
     const char *ai_host = NULL;
     const char *result = NULL;
     if (context_obj == NULL) {
-        debug("    context_get_ai_host(): context_obj is NULL\n");
+        debug("context_obj is NULL\n");
         goto term;
     }
     if (!json_object_object_get_ex(context_obj, CONTEXT_KEY_AI_HOST, &ai_host_obj)) {
-        debug("    context_get_ai_host(): context_obj does not contain key \"%s\"\n", CONTEXT_KEY_AI_HOST);
+        debug("context_obj does not contain key \"%s\"\n", CONTEXT_KEY_AI_HOST);
         goto term;
     }
     ai_host = json_object_get_string(ai_host_obj);
-    debug("    returning ai_host = \"%s\"\n", ai_host == NULL ? "NULL" : ai_host);
 term:
-    return ai_host;
+    debug_exit ai_host;
 }
 
 const char *context_get_ai_provider(void) {
-    debug("context_get_ai_provider()\n");
+    debug_enter();
     json_object *ai_provider_obj = NULL;
     const char *ai_provider = NULL;
     const char *result = NULL;
@@ -196,11 +196,11 @@ const char *context_get_ai_provider(void) {
     }
     ai_provider = json_object_get_string(ai_provider_obj);
 term:
-    return ai_provider;
+    debug_exit ai_provider;
 }
 
 const char *context_get_model(void) {
-    debug("context_get_model()\n");
+    debug_enter();
     json_object *model_obj = NULL;
     const char *model = NULL;
     const char *result = NULL;
@@ -214,11 +214,11 @@ const char *context_get_model(void) {
         model = json_object_get_string(model_obj);
     }
 term:
-    return model;
+    debug_exit model;
 }
 
 const char *context_get_system_prompt(void) {
-    debug("context_get_system_prompt()\n");
+    debug_enter();
     json_object *system_prompt_obj = NULL;
     const char *system_prompt = NULL;
     const char *result = NULL;
@@ -234,46 +234,46 @@ const char *context_get_system_prompt(void) {
     }
     result = strdup(system_prompt);
 term:
-    return result;
+    debug_exit result;
 }
 
 json_object *context_get_history(void) {
-    debug("context_get_history()\n");
+    debug_enter();
     if (context_obj == NULL) {
-        return NULL;
+        debug_exit NULL;
     }
-    return json_object_object_get(context_obj, CONTEXT_KEY_HISTORY);
+    debug_exit json_object_object_get(context_obj, CONTEXT_KEY_HISTORY);
 }
 
 const char *context_get_history_prompt(json_object *entry) {
-    debug("context_get_history_prompt()\n");
-    return json_object_get_string(json_object_object_get(entry, CONTEXT_KEY_PROMPT));
+    debug_enter();
+    debug_exit json_object_get_string(json_object_object_get(entry, CONTEXT_KEY_PROMPT));
 }
 
 const char *context_get_history_response(json_object *entry) {
-    debug("context_get_history_response()\n");
-    return json_object_get_string(json_object_object_get(entry, CONTEXT_KEY_RESPONSE));
+    debug_enter();
+    debug_exit json_object_get_string(json_object_object_get(entry, CONTEXT_KEY_RESPONSE));
 }
 
 int64_t context_get_history_timestamp(json_object *entry) {
-    debug("context_get_history_timestamp()\n");
-    return json_object_get_int64(json_object_object_get(entry, CONTEXT_KEY_TIMESTAMP));
+    debug_enter();
+    debug_exit json_object_get_int64(json_object_object_get(entry, CONTEXT_KEY_TIMESTAMP));
 }
 
 int context_set(const char *field, json_object *obj) {
-    debug("context_set()\n");
+    debug_enter();
     if (context_obj == NULL || obj == NULL || field == NULL) {
-        return 1;
+        debug_exit 1;
     }
     if (json_object_object_add(context_obj, field, json_object_get(obj))) {
         fprintf(stderr, "Error adding field \"%s\" to context object\n", field);
-        return 1;
+        debug_exit 1;
     }
-    return 0;
+    debug_exit 0;
 }
 
 int context_set_ai_host(const char *s) {
-    debug("context_set_ai_host()\n");
+    debug_enter();
     json_object *ai_host_obj = NULL;
     int result = 1;
     if (context_obj == NULL) {
@@ -286,11 +286,11 @@ int context_set_ai_host(const char *s) {
     json_object_object_add(context_obj, CONTEXT_KEY_AI_HOST, ai_host_obj);
     result = 0;
 term:
-    return result;
+    debug_exit result;
 }
 
 int context_set_ai_provider(const char *s) {
-    debug("context_set_ai_provider()\n");
+    debug_enter();
     json_object *ai_provider_obj = NULL;
     int result = 1;
     if (context_obj == NULL) {
@@ -303,11 +303,11 @@ int context_set_ai_provider(const char *s) {
     json_object_object_add(context_obj, CONTEXT_KEY_AI_PROVIDER, ai_provider_obj);
     result = 0;
 term:
-    return result;
+    debug_exit result;
 }
 
 int context_set_model(const char *s) {
-    debug("context_set_model()\n");
+    debug_enter();
     json_object *model_obj = NULL;
     int result = 1;
     if (context_obj == NULL) {
@@ -320,46 +320,47 @@ int context_set_model(const char *s) {
    json_object_object_add(context_obj, CONTEXT_KEY_MODEL, model_obj);
    result = 0;
 term:
-    return result;
+    debug_exit result;
 }
 
 int context_set_system_prompt(const char *s) {
-    debug("context_set_system_prompt()\n");
+    debug_enter();
     if (s == NULL) {
-        return 0;
+        debug_exit 0;
     }
     json_object *system_prompt_obj = NULL;
     if (context_obj == NULL) {
-        return 1;
+        debug_exit 1;
     }
     system_prompt_obj = json_object_new_string(s);
     if (system_prompt_obj == NULL) {
-        return 1;
+        debug_exit 1;
     }
     json_object_object_add(context_obj, CONTEXT_KEY_SYSTEM_PROMPT, system_prompt_obj);
-    return 0;
+    debug_exit 0;
 }
 
 void context_update(void) {
-    debug("context_update()\n");
-    debug("    writing context file \"%s\"\n", context_fn);
+    debug_enter();
+    debug("writing context file \"%s\"\n", context_fn);
     const char *s = json_object_to_json_string_ext(context_obj, JSON_C_TO_STRING_PRETTY);
-    debug("    context: \"%s\"\n", s);
+    debug("context: \"%s\"\n", s);
     file_write(context_fn, s);
+    debug_exit;
 }
 
 json_object *read_context_file(const char *fn) {
-    debug("read_context_file()\n");
+    debug_enter();
     const char *context = NULL;
     json_tokener *json = NULL;
     json_object *context_obj = NULL;
     if (fn == NULL) {
         fprintf(stderr, "No context filename\n");
-        return NULL;
+        debug_exit NULL;
     }
     context = file_read(fn);
     if (context == NULL) {
-        return NULL;
+        debug_exit NULL;
     }
     json = json_tokener_new();
     if (json == NULL) {
@@ -373,24 +374,24 @@ term:
     if (json != NULL) {
         json_tokener_free(json);
     }
-    return context_obj;
+    debug_exit context_obj;
 }
 
 static int write_context_file(const char *fn, json_object *context_obj) {
-    debug("write_context_file()\n");
+    debug_enter();
     if (fn == NULL) {
         fprintf(stderr, "No context filename\n");
-        return 1;
+        debug_exit 1;
     }
     if (context_obj == NULL) {
         fprintf(stderr, "No context object\n");
-        return 1;
+        debug_exit 1;
     }
     const char *context_json = json_object_to_json_string_ext(context_obj, JSON_C_TO_STRING_PRETTY);
     if (context_json == NULL) {
         fprintf(stderr, "Error converting context object to JSON string\n");
-        return 1;
+        debug_exit 1;
     }
     file_write(fn, context_json);
-    return 0;
+    debug_exit 0;
 }

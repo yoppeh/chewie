@@ -13,32 +13,35 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "chewie.h"
 #include "file.h"
 
 static int dir_exists(const char *path);
 static int mk_dir(const char* path, mode_t mode);
 
 int file_append_tmp(FILE **f, const char *s) {
+    debug_enter();
     if (*f == NULL) {
         *f = tmpfile();
         if (*f == NULL) {
             perror("Error creating a temporary context file");
-            return 1;
+            debug_exit 1;
         }
     }
     fprintf(*f, "%s", s);
     fflush(*f);
-    return 0;
+    debug_exit 0;
 }
 
-int file_create_path(const char *path)
-{   char *_path = NULL;
+int file_create_path(const char *path) {   
+    debug_enter();
+    char *_path = NULL;
     char *p; 
     int result = -1;
     mode_t mode = 0777;
     errno = 0;
     if (dir_exists(path)) {
-        return 0;
+        debug_exit 0;
     }
     _path = strdup(path);
     if (_path == NULL)
@@ -56,10 +59,11 @@ int file_create_path(const char *path)
     result = 0;
 out:
     free(_path);
-    return result;
+    debug_exit result;
 }
 
 char *file_read(const char *filename) {
+    debug_enter();
     char *c = NULL;
     struct stat sb;
     int fd = -1;
@@ -76,7 +80,7 @@ char *file_read(const char *filename) {
         goto err;
     }
     if (sb.st_size == 0) {
-        return NULL;
+        debug_exit NULL;
     }
     c = malloc(sb.st_size + 1);
     if (c == NULL) {
@@ -89,19 +93,20 @@ char *file_read(const char *filename) {
     }
     c[sb.st_size] = 0; // Null-terminate
     close(fd);
-    return c;
+    debug_exit c;
 err:
     if (fd > -1) {
         close(fd);
     }
-    return NULL;
+    debug_exit NULL;
 }
 
 extern char *file_read_tmp(FILE **f) {
+    debug_enter();
     if (*f != NULL) {
         if (fseek(*f, 0L, SEEK_END) == -1) {
             perror("Unable to determine size of temporary context file");
-            return NULL;
+            debug_exit NULL;
         }
         long len = ftell(*f);
         rewind(*f);
@@ -110,12 +115,13 @@ extern char *file_read_tmp(FILE **f) {
         result[len] = 0; // Null-terminate
         fclose(*f);
         *f = NULL;
-        return result;
+        debug_exit result;
     }
-    return NULL;
+    debug_exit NULL;
 }
 
 void file_truncate(const char *filename) {
+    debug_enter();
     mode_t mode = 0;
     mode |= S_IRUSR | S_IWUSR;
     mode |= S_IRGRP | S_IWGRP;
@@ -127,6 +133,7 @@ void file_truncate(const char *filename) {
 }
 
 void file_write(const char *filename, const char *data) {
+    debug_enter();
     mode_t mode = 0;
     char *c = NULL;
     struct stat sb;
@@ -144,36 +151,38 @@ void file_write(const char *filename, const char *data) {
         goto err;
     }
     close(fd);
-    return;
+    debug_exit;
 err:
     if (fd > -1) {
         close(fd);
     }
-    return;
+    debug_exit;
 }
 
 static int dir_exists(const char *path) {
+    debug_enter();
     DIR *dir = opendir(path);
     if (dir) {
         closedir(dir);
-        return 1;
+        debug_exit 1;
     }
-    return 0;
+    debug_exit 0;
 }
 
 static int mk_dir(const char* path, mode_t mode) {
+    debug_enter();
     struct stat st;
     errno = 0;
     if (mkdir(path, mode) == 0)
-        return 0;
+        debug_exit 0;
     if (errno != EEXIST)
-        return -1;
+        debug_exit -1;
     if (stat(path, &st) != 0)
-        return -1;
+        debug_exit -1;
     if (!S_ISDIR(st.st_mode)) {
         errno = ENOTDIR;
-        return -1;
+        debug_exit -1;
     }
     errno = 0;
-    return 0;
+    debug_exit 0;
 }

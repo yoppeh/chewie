@@ -29,7 +29,11 @@
 #include "ollama.h"
 #include "openai.h"
 
+int indent_level = 0;
+char *indent_string = "                                                                 ";
+
 int main(int ac, char **av) {
+    debug_enter();
     json_object *actions_obj = json_object_new_object();
     json_object *settings_obj = json_object_new_object();
     int result = 1;
@@ -68,5 +72,5 @@ term:
         json_object_put(settings_obj);
     }
     debug("Exiting with result = %i\n", result);
-    return result;
+    debug_exit result;
 }

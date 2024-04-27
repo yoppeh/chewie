@@ -63,22 +63,27 @@ static api_interface_t ollama_api_interface = {
 };
 
 const api_interface_t *ollama_get_aip_interface(void) {
-    return &ollama_api_interface;
+    debug_enter();
+    debug_exit &ollama_api_interface;
 }
 
 static const char *get_api_name(void) {
-    return "ollama";
+    debug_enter();
+    debug_exit "ollama";
 }
 
 static action_t **get_actions(void) {
-    return NULL;
+    debug_enter();
+    debug_exit NULL;
 }
 
 static option_t **get_options(void) {
-    return NULL;
+    debug_enter();
+    debug_exit NULL;
 }
 
 static const char *get_default_host(void) {
+    debug_enter();
     char *host = NULL;
     char *s = getenv("OLLAMA_HOST");
     if (s != NULL) {
@@ -96,52 +101,55 @@ static const char *get_default_host(void) {
     } else {
         host = strdup(default_host);
     }
-    return host;
+    debug_exit host;
 }
 
 static const char *get_default_model(void) {
-    return strdup(default_model);
+    debug_enter();
+    debug_exit strdup(default_model);
 }
 
 static char *get_endpoint(const char *host, const char *api_endpoint) {
+    debug_enter();
     char *endpoint = NULL;
     long int endpoint_size = strlen(host) + strlen(api_endpoint) + 1;
     endpoint = malloc(endpoint_size);
     if (endpoint == NULL) {
         fprintf(stderr, "Error allocating memory for API endpoint\n");
-        return NULL;
+        debug_exit NULL;
     }
     strncpy(endpoint, host, endpoint_size);
     strncat(endpoint, api_endpoint, endpoint_size);
-    return endpoint;
+    debug_exit endpoint;
 }
 
 static size_t list_models_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    debug_enter();
     static json_object *json_obj = NULL;
     enum json_tokener_error jerr;
     json_obj = json_tokener_parse_ex(json, ptr, nmemb);
     jerr = json_tokener_get_error(json);
     if (jerr == json_tokener_continue) {
-        return nmemb;
+        debug_exit nmemb;
     }
     if (jerr != json_tokener_success) {
         fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
-        return 0;
+        debug_exit 0;
     }
     enum json_type type = json_object_get_type(json_obj);
     if (type != json_type_object) {
         fprintf(stderr, "Response doesn't appear to be a JSON object\n");
-        return 0;
+        debug_exit 0;
     }
     json_object *models = json_object_object_get(json_obj, "models");
     if (models == NULL) {
-        fprintf(stderr, "No models returned\n");
-        return 0;
+        fprintf(stderr, "No models debug_exited\n");
+        debug_exit 0;
     }
     array_list *model_array = json_object_get_array(models);
     if (model_array == NULL) {
         fprintf(stderr, "Error reading list of models\n");
-        return 0;
+        debug_exit 0;
     }
     int model_count = json_object_array_length(models);
     char **model_list = malloc(model_count * sizeof(char *));
@@ -149,17 +157,17 @@ static size_t list_models_callback(char *ptr, size_t size, size_t nmemb, void *u
         json_object *model = json_object_array_get_idx(models, i);
         if (model == NULL) {
             fprintf(stderr, "Error reading model information\n");
-            return 0;
+            debug_exit 0;
         }
         json_object *name = json_object_object_get(model, "name");
         if (name == NULL) {
             fprintf(stderr, "Couldn't find model name\n");
-            return 0;
+            debug_exit 0;
         }
         const char *model_name = json_object_get_string(name);
         if (model_name == NULL) {
             fprintf(stderr, "Couldn't get model name\n");
-            return 0;
+            debug_exit 0;
         }
         model_list[i] = (char *)model_name;
     }
@@ -167,10 +175,11 @@ static size_t list_models_callback(char *ptr, size_t size, size_t nmemb, void *u
     for (int i = 0; i < model_count; i++) {
         printf("    %s\n", model_list[i]);
     }
-    return nmemb;
+    debug_exit nmemb;
 }
 
 static void ollama_exit(void) {
+    debug_enter();
     if (json != NULL) {
         json_tokener_free(json);
         json = NULL;
@@ -180,70 +189,73 @@ static void ollama_exit(void) {
         curl = NULL;
     }
     curl_global_cleanup();
+    debug_exit;
 }
 
 static int ollama_init(void) {
+    debug_enter();
     CURLcode res;
     res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
-        return 1;
+        debug_exit 1;
     }
     curl = curl_easy_init();
     if (curl == NULL) {
         fprintf(stderr, "API request error: couldn't initialize curl\n");
-        return 1;
+        debug_exit 1;
     }
     json = json_tokener_new();
     if (json == NULL) {
         fprintf(stderr, "JSON parser error: couldn't initialize JSON parser\n");
-        return 1;
+        debug_exit 1;
     }
-    return 0;
+    debug_exit 0;
 }
 
 static size_t print_curl_data(char *data, size_t len) {
+    debug_enter();
     char *s = malloc(len + 1);
     if (s == NULL) {
         fprintf(stderr, "Error allocating buffer for input\n");
-        return 0;
+        debug_exit 0;
     }
     memcpy(s, data, len);
     s[len] = 0;
     fprintf(stdout, "%s", s);
     fflush(stdout);
     free(s);
-    return len;
+    debug_exit len;
 }
 
 static int print_model_list(json_object *options) {
+    debug_enter();
     CURLcode res;
     json_object *field_obj = NULL;
     const char *host = default_host;
     char *endpoint = NULL;
     if (ollama_init()) {
-        return 1;
+        debug_exit 1;
     }
     if (json_object_object_get_ex(options, SETTING_KEY_AI_HOST, &field_obj)) {
         host = json_object_get_string(field_obj);
     }
     if ((endpoint = get_endpoint(host, api_listmodels_endpoint)) == NULL) {
-        return 1;
+        debug_exit 1;
     }
     setup_curl(NULL, endpoint, list_models_callback);
     printf("Models available at %s:\n", host);
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
-        return 1;
+        debug_exit 1;
     }
-term:
     ollama_exit();
-    return 0;
+    debug_exit 0;
 }
 
 static const char *query(json_object *options) {
-    debug("query()\n");
+    debug_enter();
     CURLcode res;
     char *endpoint = NULL;
     char *response = NULL;
@@ -258,7 +270,7 @@ static const char *query(json_object *options) {
     const char *system_prompt = NULL;
     enum json_tokener_error jerr;
     if (ollama_init()) {
-        return NULL;
+        debug_exit NULL;
     } 
     if (json_object_object_get_ex(options, SETTING_KEY_AI_HOST, &field_obj)) {
         host = json_object_get_string(field_obj);
@@ -318,10 +330,11 @@ static const char *query(json_object *options) {
     fprintf(stdout, "\n");
 term:
     ollama_exit();
-    return NULL;
+    debug_exit NULL;
 }
 
 static size_t query_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    debug_enter();
     static json_object *json_obj = NULL;
     enum json_tokener_error jerr;
     static FILE *tmp_response = NULL;
@@ -329,11 +342,11 @@ static size_t query_callback(char *ptr, size_t size, size_t nmemb, void *userdat
     json_obj = json_tokener_parse_ex(json, ptr, nmemb);
     jerr = json_tokener_get_error(json);
     if (jerr == json_tokener_continue) {
-        return nmemb;
+        debug_exit nmemb;
     }
     if (jerr != json_tokener_success) {
         fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
-        return 0;
+        debug_exit 0;
     }
     enum json_type type = json_object_get_type(json_obj);
     if (type == json_type_object) {
@@ -353,7 +366,7 @@ static size_t query_callback(char *ptr, size_t size, size_t nmemb, void *userdat
                 json_object *ollama_obj = json_object_new_object();
                 if (!ollama_obj) {
                     fprintf(stderr, "Error constructing JSON updates object\n");
-                    return 0;
+                    debug_exit 0;
                 }
                 const char *response = file_read_tmp(&tmp_response);
                 const char *embeddings = file_read_tmp(&tmp_context);
@@ -361,20 +374,20 @@ static size_t query_callback(char *ptr, size_t size, size_t nmemb, void *userdat
                 context_add_history(prompt_str, response, timestamp);
                 context_set("ollama", ollama_obj);
                 context_update();
-                return nmemb;
+                debug_exit nmemb;
             }
 
         }
         if (json_object_object_get_ex(json_obj, "error", &data)) {
             printf("\n>> Error: %s\n", json_object_get_string(data));
-            return nmemb;
+            debug_exit nmemb;
         } 
     }
-    return nmemb;
+    debug_exit nmemb;
 }
 
 static int get_embeddings(json_object *settings) {
-    debug("get_embeddings()\n");
+    debug_enter();
     CURLcode res;
     char *endpoint = NULL;
     char *response = NULL;
@@ -389,7 +402,7 @@ static int get_embeddings(json_object *settings) {
     const char *system_prompt = NULL;
     enum json_tokener_error jerr;
     if (ollama_init()) {
-        return 1;
+        debug_exit 1;
     } 
     if (json_object_object_get_ex(settings, SETTING_KEY_AI_HOST, &field_obj)) {
         host = json_object_get_string(field_obj);
@@ -399,7 +412,7 @@ static int get_embeddings(json_object *settings) {
     } else {
         jerr = json_tokener_get_error(json);
         fprintf(stderr, "JSON parse error: %s\n", json_tokener_error_desc(jerr));
-        return 1;
+        debug_exit 1;
     }
     if (json_object_object_get_ex(settings, SETTING_KEY_AI_MODEL, &field_obj)) {
         model = json_object_get_string(field_obj);
@@ -407,12 +420,12 @@ static int get_embeddings(json_object *settings) {
     query_obj = json_object_new_object();
     if (query_obj == NULL) {
         fprintf(stderr, "Error constructing JSON query object\n");
-        return 1;;
+        debug_exit 1;;
     }
     json_object_object_add(query_obj, "model", json_object_new_string(model));
     json_object_object_add(query_obj, "prompt", json_object_new_string(prompt_str));
     if ((endpoint = get_endpoint(host, api_embeddings_endpoint)) == NULL) {
-        return 1;
+        debug_exit 1;
     }
     debug("get_embeddings() post data: %s\n", json_object_to_json_string_ext(query_obj, JSON_C_TO_STRING_PRETTY));
     setup_curl(query_obj, endpoint, get_embeddings_callback);
@@ -420,47 +433,49 @@ static int get_embeddings(json_object *settings) {
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
-        return 1;
+        debug_exit 1;
     }
     fprintf(stdout, "\n");
 term:
     ollama_exit();
-    return 0;
+    debug_exit 0;
 }
 
 static size_t get_embeddings_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    debug_enter();
     static json_object *json_obj = NULL;
     enum json_tokener_error jerr;
     json_obj = json_tokener_parse_ex(json, ptr, nmemb);
     jerr = json_tokener_get_error(json);
     if (jerr == json_tokener_continue) {
-        return nmemb;
+        debug_exit nmemb;
     }
     if (jerr != json_tokener_success) {
         fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
-        return 0;
+        debug_exit 0;
     }
     json_object *embeddings = json_object_object_get(json_obj, "embedding");
     if (embeddings == NULL) {
-        return nmemb;
+        debug_exit nmemb;
     }
     for (int i = 0, j = json_object_array_length(embeddings); i < j; i++) {
         json_object *embedding = json_object_array_get_idx(embeddings, i);
         if (embedding == NULL) {
             fprintf(stderr, "Error reading embedding\n");
-            return 0;
+            debug_exit 0;
         }
         const char *embedding_str = json_object_get_string(embedding);
         if (embedding_str == NULL) {
             fprintf(stderr, "Error reading embedding\n");
-            return 0;
+            debug_exit 0;
         }
         fprintf(stdout, "%s\n", embedding_str);
     }
-    return nmemb;
+    debug_exit nmemb;
 }
 
 static void setup_curl(json_object *query_obj, const char *endpoint, curl_callback_t callback) {
+    debug_enter();
     if (query_obj) {
         const char *s = json_object_to_json_string_ext(query_obj, JSON_C_TO_STRING_PLAIN);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, s);
@@ -472,8 +487,10 @@ static void setup_curl(json_object *query_obj, const char *endpoint, curl_callba
     }
     curl_easy_setopt(curl, CURLOPT_URL, endpoint);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+    debug_exit;
 }
 
 static int string_compare(const void *a, const void *b) {
-    return strcmp(*(char **)a, *(char **)b);
+    debug_enter();
+    debug_exit strcmp(*(char **)a, *(char **)b);
 }
