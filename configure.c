@@ -1,11 +1,16 @@
 /**
- * configure.c
- *
- * Configure according to comm and line arguments and environment. Uses getopt()
- * to parse command line arguments and json-c to store the results in a JSON
- * object. That object is then sent to the action processor to execute any
- * actions specified, such as dumping the query. The object is then passed on
- * to the API interface to be used to send the proper query to the API.
+ * @file configure.c
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief Configure environment and setup actions./**
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
+ * @details
+ * Configure according to command line arguments and environment. Uses 
+ * getopt() to parse command line arguments and json-c to store the results in 
+ * a JSON object. That object is then sent to the action processor to execute 
+ * any actions specified, such as dumping the query. The object is then passed 
+ * on to the API interface to be used to send the proper query to the API.
  */
 
 #include <stdbool.h>
@@ -167,23 +172,23 @@ static int merge_api_options(void);
 int configure(json_object *actions_obj, json_object *settings_obj, int ac, char **av) {
     debug_enter();
     if (merge_api_options()) {
-        debug_exit 1;
+        debug_return 1;
     }
     program_name = av[0];
     if (option_parse_args(options, ac, av, actions_obj, settings_obj) != 0) {
         debug("configure() option_parse_args() failed\n");
-        debug_exit 1;
+        debug_return 1;
     }
     option_set_missing(options, actions_obj, settings_obj);
     debug("actions_obj = %s\n", json_object_to_json_string(actions_obj));
     if (context_set_ai_host(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_HOST)))) {
-        debug_exit 1;
+        debug_return 1;
     }
     if (context_set_ai_provider(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_PROVIDER)))) {
-        debug_exit 1;
+        debug_return 1;
     }
     if (context_set_model(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_MODEL)))) {
-        debug_exit 1;
+        debug_return 1;
     }
     debug("settings_obj = %s\n", json_object_to_json_string(settings_obj)); 
 #ifdef DEBUG
@@ -193,7 +198,7 @@ int configure(json_object *actions_obj, json_object *settings_obj, int ac, char 
     }
     debug_indent_dec();
 #endif
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int set_missing_aih(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -201,7 +206,7 @@ static int set_missing_aih(option_t *option, json_object *actions_obj, json_obje
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_HOST, &value)) {
         debug("aih set on command line to %s\n", json_object_get_string(value));
-        debug_exit 0;
+        debug_return 0;
     }
     char *host = NULL;
     const char *h = context_get_ai_host();
@@ -222,7 +227,7 @@ static int set_missing_aih(option_t *option, json_object *actions_obj, json_obje
             api_id_t id = api_name_to_id(json_object_get_string(value));
             if (id == api_id_none) {
                 fprintf(stderr, "Invalid api name in environment variable \"%s\": \"%s\"\n", ENV_KEY_AI_PROVIDER, json_object_get_string(value));
-                debug_exit 1;
+                debug_return 1;
                 
             }
             const api_interface_t *api_interface = api_get_aip_interface(id);
@@ -235,9 +240,9 @@ static int set_missing_aih(option_t *option, json_object *actions_obj, json_obje
         free(host);
     } else {
         fprintf(stderr, "Error setting an API backend host\n");
-        debug_exit 1;
+        debug_return 1;
     }
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int set_missing_aip(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -245,7 +250,7 @@ static int set_missing_aip(option_t *option, json_object *actions_obj, json_obje
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_PROVIDER, &value)) {
         debug("aip set on command line to %s\n", json_object_get_string(value));
-        debug_exit 0;
+        debug_return 0;
     }
     api_id_t id = api_id_default;
     const char *a = context_get_ai_provider();
@@ -256,14 +261,14 @@ static int set_missing_aip(option_t *option, json_object *actions_obj, json_obje
         id = api_name_to_id(a);
         if (id == api_id_none) {
             fprintf(stderr, "Invalid api name in environment variable \"%s\": \"%s\"\n", ENV_KEY_AI_PROVIDER, a);
-            debug_exit 1;
+            debug_return 1;
         }
     }
     const api_interface_t *api_interface = api_get_aip_interface(id);
     char *api_name = (char *)api_interface->get_api_name();
     debug("setting aip to %s\n", api_name);
     json_object_object_add(settings_obj, SETTING_KEY_AI_PROVIDER, json_object_new_string(api_name));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int set_missing_ctx(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -299,7 +304,7 @@ static int set_missing_ctx(option_t *option, json_object *actions_obj, json_obje
     context_fn = malloc(l);
     if (context_fn == NULL) {
         fprintf(stderr, "Error setting context file path/name\n");
-        debug_exit 1;
+        debug_return 1;
     }
     strcpy(context_fn, h);
     strcat(context_fn, d);
@@ -317,7 +322,7 @@ term:
     if (context_fn != NULL) {
         free(context_fn);
     }
-    debug_exit result;
+    debug_return result;
 }
 
 static int set_missing_mdl(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -326,7 +331,7 @@ static int set_missing_mdl(option_t *option, json_object *actions_obj, json_obje
     const api_interface_t *api_interface = NULL;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_MODEL, &value)) {
         debug("model is set to %s\n", json_object_get_string(value));
-        debug_exit 0;
+        debug_return 0;
     }
     const char *m = context_get_model();
     debug("model in context file is %s\n", m);
@@ -345,26 +350,26 @@ static int set_missing_mdl(option_t *option, json_object *actions_obj, json_obje
         }
     }
     json_object_object_add(settings_obj, SETTING_KEY_AI_MODEL, json_object_new_string(m));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int set_missing_qry(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_PROMPT, &value)) {
-        debug_exit 0;
+        debug_return 0;
     }
     if (json_object_object_get_ex(actions_obj, ACTION_KEY_DUMP_QUERY_HISTORY, &value)) {
-        debug_exit 0;
+        debug_return 0;
     }
     if (json_object_object_get_ex(actions_obj, ACTION_KEY_GET_EMBEDDINGS, &value)) {
-        debug_exit 0;
+        debug_return 0;
     }
     if (json_object_object_get_ex(actions_obj, ACTION_KEY_LIST_MODELS, &value)) {
-        debug_exit 0;
+        debug_return 0;
     }
     json_object_object_add(actions_obj, ACTION_KEY_QUERY, NULL);
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int set_missing_sys(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -372,20 +377,20 @@ static int set_missing_sys(option_t *option, json_object *actions_obj, json_obje
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_SYSTEM_PROMPT, &value)) {
         context_set_system_prompt(json_object_get_string(value));
-        debug_exit 0;
+        debug_return 0;
     }
     const char *s = context_get_system_prompt();
     if (s == NULL) {
-         debug_exit 0;
+         debug_return 0;
     }
     json_object_object_add(settings_obj, SETTING_KEY_SYSTEM_PROMPT, json_object_new_string(s));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_aih_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(settings_obj, SETTING_KEY_AI_HOST, json_object_new_string(option->value));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_aip_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -393,40 +398,40 @@ static int option_aip_validate(option_t *option, json_object *actions_obj, json_
     if (strcmp(option->value, list_argument) == 0) {
         debug("list_apis requested\n");
         json_object_object_add(actions_obj, ACTION_KEY_LIST_APIS, json_object_new_boolean(true));
-        debug_exit 0;
+        debug_return 0;
     } 
     api_id_t id = api_name_to_id(option->value);
     if (id != api_id_none) {
         json_object_object_add(settings_obj, SETTING_KEY_AI_PROVIDER, json_object_new_string(option->value));
     } else {
         fprintf(stderr, "Invalid api name: \"%s\"\n", option->value);
-        debug_exit 1;
+        debug_return 1;
     }
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_buf_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_BUFFERED, json_object_new_boolean(true));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_ctx_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(settings_obj, SETTING_KEY_CONTEXT_FILENAME, json_object_new_string(option->value));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_emb_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_GET_EMBEDDINGS, json_object_new_string(option->value));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_his_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_DUMP_QUERY_HISTORY, json_object_new_boolean(true));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_mdl_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -434,10 +439,10 @@ static int option_mdl_validate(option_t *option, json_object *actions_obj, json_
     if (strcmp(option->value, list_argument) == 0) {
         debug("list_models requested\n");
         json_object_object_add(actions_obj, ACTION_KEY_LIST_MODELS, json_object_new_boolean(true));
-        debug_exit 0;
+        debug_return 0;
     }
     json_object_object_add(settings_obj, SETTING_KEY_AI_MODEL, json_object_new_string(option->value));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_qry_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -453,37 +458,37 @@ static int option_qry_validate(option_t *option, json_object *actions_obj, json_
     } else {
         json_object_object_add(actions_obj, ACTION_KEY_QUERY, NULL);
     }
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_sys_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(settings_obj, SETTING_KEY_SYSTEM_PROMPT, json_object_new_string(option->value));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_h_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_HELP, json_object_new_int64((int64_t)options));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_r_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_RESET_CONTEXT, json_object_new_boolean(true));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_u_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_UPDATE_CONTEXT, json_object_new_boolean(true));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int option_v_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_VERSION, json_object_new_boolean(true));
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int merge_api_options(void) {
@@ -501,11 +506,11 @@ static int merge_api_options(void) {
                         }
                         options = new;
                     } else {
-                        debug_exit 1;
+                        debug_return 1;
                     }
                 }
             }
         }
     }
-    debug_exit 0;
+    debug_return 0;
 }

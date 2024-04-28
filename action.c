@@ -1,7 +1,10 @@
 /**
- * action.c
- *
- * Actions that are performed in response to certain command line arguments.
+ * @file action.c
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief Actions that are performed in response to certain command line arguments.
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
  */
 
 #include <stdio.h>
@@ -89,7 +92,7 @@ action_result_t action_execute_all(json_object *actions, json_object *settings) 
         if (b != NULL) {
             action_t **c = action_merge(merged_actions, b);
             if (c == NULL) {
-                debug_exit ACTION_ERROR;
+                debug_return ACTION_ERROR;
             }
             if (merged_actions != action_templates) {
                 free(merged_actions);
@@ -115,13 +118,13 @@ action_result_t action_execute_all(json_object *actions, json_object *settings) 
             }
         } 
     }
-    debug_exit result;
+    debug_return result;
 }
 
 static action_result_t dump_query_history(json_object *actions, json_object *settings_obj) {
     debug_enter();
     context_dump_history();
-    debug_exit ACTION_END;
+    debug_return ACTION_END;
 }
 
 static action_result_t get_embeddings(json_object *settings, json_object *data) {
@@ -144,9 +147,9 @@ static action_result_t get_embeddings(json_object *settings, json_object *data) 
         query = NULL;
     }
     if (api_interface->get_embeddings(settings)) {
-        debug_exit ACTION_ERROR;
+        debug_return ACTION_ERROR;
     }
-    debug_exit ACTION_END;
+    debug_return ACTION_END;
 }
 
 static action_result_t list_apis(json_object *settings, json_object *data) {
@@ -157,16 +160,16 @@ static action_result_t list_apis(json_object *settings, json_object *data) {
         const char *s = api_interface->get_api_name();
         printf("    %s\n", s);
     }
-    debug_exit ACTION_END;
+    debug_return ACTION_END;
 }
 
 static action_result_t list_models(json_object *settings, json_object *data) {
     debug_enter();
     debug("data = %s\n", json_object_to_json_string_ext(data, JSON_C_TO_STRING_PRETTY));
     if (api_interface->print_model_list(settings)) {
-        debug_exit ACTION_ERROR;
+        debug_return ACTION_ERROR;
     }
-    debug_exit ACTION_END;
+    debug_return ACTION_END;
 }
 
 static action_result_t query(json_object *settings, json_object *data) {
@@ -184,19 +187,19 @@ static action_result_t query(json_object *settings, json_object *data) {
         }
     }
     api_interface->query(settings);
-    debug_exit ACTION_END;
+    debug_return ACTION_END;
 }
 
 static action_result_t show_help(json_object *settings, json_object *data) {
     debug_enter();
     option_show_help((option_t **)json_object_get_int64(data));
-    debug_exit ACTION_END;
+    debug_return ACTION_END;
 }
 
 static action_result_t show_version(json_object *settings, json_object *data) {
     debug_enter();
     printf("%s v. %i.%i.%i\n", program_name, VERSION_MAJOR, VERSION_MINOR, VERSION_REV);
-    debug_exit ACTION_END;
+    debug_return ACTION_END;
 }
 
 static action_result_t reset_context(json_object *settings, json_object *options) {
@@ -205,15 +208,15 @@ static action_result_t reset_context(json_object *settings, json_object *options
     if (json_object_object_get_ex(settings, SETTING_KEY_CONTEXT_FILENAME, &context_fn)) {
         const char *fn = json_object_get_string(context_fn);
         file_truncate(fn);
-        debug_exit ACTION_CONTINUE;
+        debug_return ACTION_CONTINUE;
     }
-    debug_exit ACTION_ERROR;
+    debug_return ACTION_ERROR;
 }
 
 static action_result_t update_context(json_object *settings, json_object *data) {
     debug_enter();
     debug("settings = %s\n", json_object_to_json_string_ext(settings, JSON_C_TO_STRING_PRETTY));
-    debug_exit ACTION_END;
+    debug_return ACTION_END;
 }
 
 static action_t **action_merge(action_t **actions1, action_t **actions2) {
@@ -233,7 +236,7 @@ static action_t **action_merge(action_t **actions1, action_t **actions2) {
     int n = n1 + n2 + 1;
     action_t **actions = malloc(n * sizeof(action_t *));
     if (actions == NULL) {
-        debug_exit NULL;
+        debug_return NULL;
     }
     if (actions1 != NULL) {
         memcpy(actions, actions1, n1 * sizeof(action_t *));
@@ -242,5 +245,5 @@ static action_t **action_merge(action_t **actions1, action_t **actions2) {
         memcpy(actions + n1, actions2, n2 * sizeof(action_t *));
     }
     actions[n - 1] = NULL;
-    debug_exit actions;    
+    debug_return actions;    
 }

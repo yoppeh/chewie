@@ -1,11 +1,16 @@
 /**
- * file.h
- *
- * File I/O operations.
+ * @file file.h
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief File I/O operations.
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
  */
 
 #ifndef _FILE_H
 #define _FILE_H
+
+#include <stdio.h>
 
 /// Append the given string to the temporary file. The file is created if it
 /// does not exist.

@@ -1,7 +1,10 @@
 /**
- * openai.c
- *
- * Interface to OpenAI API.
+ * @file openai.c
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief Interface to OpenAI API.
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
  */
 
 #include <stdbool.h>
@@ -92,27 +95,27 @@ static option_t *options[] = {
 
 const char *get_access_token(void) {
     debug_enter();
-    debug_exit getenv("OPENAI_API_KEY");
+    debug_return getenv("OPENAI_API_KEY");
 }
 
 const api_interface_t *openai_get_aip_interface(void) {
     debug_enter();
-    debug_exit &openai_api_interface;
+    debug_return &openai_api_interface;
 }
 
 static const char *get_api_name(void) {
     debug_enter();
-    debug_exit ai_provider;
+    debug_return ai_provider;
 }
 
 static action_t **get_actions(void) {
     debug_enter();
-    debug_exit NULL;
+    debug_return NULL;
 }
 
 static option_t **get_options(void) {
     debug_enter();
-    debug_exit options;
+    debug_return options;
 }
 
 static const char *get_default_host(void) {
@@ -134,12 +137,12 @@ static const char *get_default_host(void) {
     } else {
         host = strdup(default_host);
     }
-    debug_exit host;
+    debug_return host;
 }
 
 static const char *get_default_model(void) {
     debug_enter();
-    debug_exit strdup(default_model);
+    debug_return strdup(default_model);
 }
 
 static int get_embeddings(json_object *settings) {
@@ -155,18 +158,18 @@ static int get_embeddings(json_object *settings) {
     const char *context = NULL;
     enum json_tokener_error jerr;
     if (openai_init()) {
-        debug_exit 1;
+        debug_return 1;
     }
     if (json_object_object_get_ex(settings, SETTING_KEY_AI_HOST, &json_obj)) {
         host = json_object_get_string(json_obj);
     }
     if ((endpoint = get_endpoint(host, api_get_embeddings_endpoint)) == NULL) {
-        debug_exit 1;
+        debug_return 1;
     }
     query_obj = json_object_new_object();
     if (query_obj == NULL) {
         fprintf(stderr, "Error creating new JSON object\n");
-        debug_exit 1;
+        debug_return 1;
     }
     json_object_object_add(query_obj, "input", json_object_object_get(settings, SETTING_KEY_PROMPT));
     json_object_object_add(query_obj, "model", json_object_object_get(settings, SETTING_KEY_EMBEDDING_MODEL));
@@ -175,11 +178,11 @@ static int get_embeddings(json_object *settings) {
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
-        debug_exit 1;
+        debug_return 1;
     }
 term:
     openai_exit();
-    debug_exit 0;
+    debug_return 0;
 }
 
 static size_t get_embeddings_callback(void *contents, size_t size, size_t nmemb, void *user_data) {
@@ -189,16 +192,16 @@ static size_t get_embeddings_callback(void *contents, size_t size, size_t nmemb,
     json_obj = json_tokener_parse_ex(json, contents, nmemb);
     jerr = json_tokener_get_error(json);
     if (jerr == json_tokener_continue) {
-        debug_exit nmemb;
+        debug_return nmemb;
     }
     if (jerr != json_tokener_success) {
         fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
-        debug_exit 0;
+        debug_return 0;
     }
     enum json_type type = json_object_get_type(json_obj);
     if (type != json_type_object) {
         fprintf(stderr, "Response doesn't appear to be a JSON object\n");
-        debug_exit 0;
+        debug_return 0;
     }
     json_object *error_obj = json_object_object_get(json_obj, "error");
     if (error_obj != NULL) {
@@ -208,7 +211,7 @@ static size_t get_embeddings_callback(void *contents, size_t size, size_t nmemb,
         } else {
             fprintf(stderr, "Error getting message from response\n");
         }
-        debug_exit 0;
+        debug_return 0;
     }
     json_obj = json_object_object_get(json_obj, "data");
     for (int x = 0, y = json_object_array_length(json_obj); x < y; x++) {
@@ -222,7 +225,7 @@ static size_t get_embeddings_callback(void *contents, size_t size, size_t nmemb,
             }
         }
     }
-    debug_exit nmemb;
+    debug_return nmemb;
 }
 
 static char *get_endpoint(const char *host, const char *api_endpoint) {
@@ -232,11 +235,11 @@ static char *get_endpoint(const char *host, const char *api_endpoint) {
     endpoint = malloc(endpoint_size);
     if (endpoint == NULL) {
         fprintf(stderr, "Error allocating memory for API endpoint\n");
-        debug_exit NULL;
+        debug_return NULL;
     }
     strncpy(endpoint, host, endpoint_size);
     strncat(endpoint, api_endpoint, endpoint_size);
-    debug_exit endpoint;
+    debug_return endpoint;
 }
 
 static void openai_exit(void) {
@@ -250,7 +253,7 @@ static void openai_exit(void) {
         curl = NULL;
     }
     curl_global_cleanup();
-    debug_exit;
+    debug_return;
 }
 
 static int openai_init(void) {
@@ -259,24 +262,24 @@ static int openai_init(void) {
     res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
-        debug_exit 1;
+        debug_return 1;
     }
     curl = curl_easy_init();
     if (curl == NULL) {
         fprintf(stderr, "Error initializing curl\n");
-        debug_exit 1;
+        debug_return 1;
     }
     json = json_tokener_new();
     if (json == NULL) {
         fprintf(stderr, "JSON parser error: couldn't initialize JSON parser\n");
-        debug_exit 1;
+        debug_return 1;
     }
     updates_obj = json_object_new_object();
     if (updates_obj == NULL) {
         fprintf(stderr, "Error creating new JSON object\n");
-        debug_exit 1;
+        debug_return 1;
     }
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int print_model_list(json_object *options) {
@@ -286,13 +289,13 @@ static int print_model_list(json_object *options) {
     const char *host = default_host;
     char *endpoint = NULL;
     if (openai_init()) {
-        debug_exit 1;
+        debug_return 1;
     }
     if (json_object_object_get_ex(options, SETTING_KEY_AI_HOST, &field_obj)) {
         host = json_object_get_string(field_obj);
     }
     if ((endpoint = get_endpoint(host, api_listmodels_endpoint)) == NULL) {
-        debug_exit 1;
+        debug_return 1;
     }
     printf("ENDPOINT: %s\n", endpoint);
     setup_curl(NULL, endpoint, print_model_list_callback);
@@ -300,10 +303,10 @@ static int print_model_list(json_object *options) {
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
-        debug_exit 1;
+        debug_return 1;
     }
     openai_exit();
-    debug_exit 0;
+    debug_return 0;
 }
 
 static size_t print_model_list_callback(void *contents, size_t size, size_t nmemb, void *user_data) {
@@ -313,28 +316,28 @@ static size_t print_model_list_callback(void *contents, size_t size, size_t nmem
     json_obj = json_tokener_parse_ex(json, contents, nmemb);
     jerr = json_tokener_get_error(json);
     if (jerr == json_tokener_continue) {
-        debug_exit nmemb;
+        debug_return nmemb;
     }
     if (jerr != json_tokener_success) {
         fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
-        debug_exit 0;
+        debug_return 0;
     }
     enum json_type type = json_object_get_type(json_obj);
     if (type != json_type_object) {
         fprintf(stderr, "Response doesn't appear to be a JSON object\n");
-        debug_exit 0;
+        debug_return 0;
     }
     json_obj = json_object_object_get(json_obj, "data");
     array_list *models = json_object_get_array(json_obj);
     if (models == NULL) {
         fprintf(stderr, "Error getting models from response\n");
-        debug_exit 0;
+        debug_return 0;
     }
     int model_count = array_list_length(models);
     char **model_names = malloc(model_count * sizeof(char *));
     if (model_names == NULL) {
         fprintf(stderr, "Error allocating %lu bytes of memory for model names\n", model_count * sizeof(char *));
-        debug_exit 0;
+        debug_return 0;
     }
     for (int i = 0; i < model_count; i++) {
         json_object *model = array_list_get_idx(models, i);
@@ -343,14 +346,14 @@ static size_t print_model_list_callback(void *contents, size_t size, size_t nmem
             model_names[i] = (char *)json_object_get_string(id);
         } else {
             fprintf(stderr, "Error getting model id from response\n");
-            debug_exit 0;
+            debug_return 0;
         }
     }
     qsort(model_names, model_count, sizeof(char *), string_compare);
     for (int i = 0; i < model_count; i++) {
         printf("    %s\n", model_names[i]);
     }
-    debug_exit nmemb;
+    debug_return nmemb;
 }
 
 static const char *query(json_object *options) {
@@ -367,7 +370,7 @@ static const char *query(json_object *options) {
     const char *context = NULL;
     enum json_tokener_error jerr;
     if (openai_init()) {
-        debug_exit NULL;
+        debug_return NULL;
     }
     if (json_object_object_get_ex(options, SETTING_KEY_AI_HOST, &json_obj)) {
         host = json_object_get_string(json_obj);
@@ -409,7 +412,7 @@ static const char *query(json_object *options) {
     context_update();
 term:
     openai_exit();
-    debug_exit NULL;
+    debug_return NULL;
 }
 
 static size_t query_callback(void *contents, size_t size, size_t nmemb, void *user_data) {
@@ -419,11 +422,11 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
     json_obj = json_tokener_parse_ex(json, contents, nmemb);
     jerr = json_tokener_get_error(json);
     if (jerr == json_tokener_continue) {
-        debug_exit nmemb;
+        debug_return nmemb;
     }
     if (jerr != json_tokener_success) {
         fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
-        debug_exit 0;
+        debug_return 0;
     }
     enum json_type type = json_object_get_type(json_obj);
     if (type == json_type_object) {
@@ -435,7 +438,7 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
             json_object *message = NULL;
             if (choice == NULL) {
                 fprintf(stderr, "Error getting choice from response\n");
-                debug_exit 0;
+                debug_return 0;
             }
             if (json_object_object_get_ex(choice, "message", &message)) {
                 if (json_object_object_get_ex(message, "content", &content)) {
@@ -444,11 +447,11 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
                     file_append_tmp(&tmp_response, s);
                 } else {
                     fprintf(stderr, "Error getting content from response\n");
-                    debug_exit 0;
+                    debug_return 0;
                 }
             } else {
                 fprintf(stderr, "Error getting message from response\n");
-                debug_exit 0;
+                debug_return 0;
             }
         } else if (json_object_object_get_ex(json_obj, "error", &error)) {
             json_object *message = NULL;
@@ -457,13 +460,13 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
             } else {
                 fprintf(stderr, "Error getting message from response\n");
             }
-            debug_exit 0;
+            debug_return 0;
         }
     } else {
         fprintf(stderr, "Response doesn't appear to be a JSON object:\n%*s\n", (int)nmemb, (char *)contents);
-        debug_exit 0;
+        debug_return 0;
     }
-    debug_exit nmemb;
+    debug_return nmemb;
 }
 
 static json_object *query_get_history(json_object *options) {
@@ -483,13 +486,13 @@ static json_object *query_get_history(json_object *options) {
     history_obj = json_object_new_array();
     if (history_obj == NULL) {
         fprintf(stderr, "Error creating new JSON object\n");
-        debug_exit NULL;
+        debug_return NULL;
     }
     if (json_object_object_get_ex(options, SETTING_KEY_SYSTEM_PROMPT, &system_prompt_obj)) {
         new_entry = json_object_new_object();
         if (new_entry == NULL) {
             fprintf(stderr, "Error creating new JSON object\n");
-            debug_exit NULL;
+            debug_return NULL;
         }
         json_object_object_add(new_entry, "role", json_object_new_string("system"));
         json_object_object_add(new_entry, "content", system_prompt_obj);
@@ -512,7 +515,7 @@ static json_object *query_get_history(json_object *options) {
                 new_entry = json_object_new_object();
                 if (new_entry == NULL) {
                     fprintf(stderr, "Error creating new JSON object\n");
-                    debug_exit NULL;
+                    debug_return NULL;
                 }
                 if (system_prompt_obj != NULL && json_object_get_boolean(system_prompt_obj)) {
                     json_object_object_add(new_entry, "role", json_object_new_string("system"));
@@ -526,7 +529,7 @@ static json_object *query_get_history(json_object *options) {
                 new_entry = json_object_new_object();
                 if (new_entry == NULL) {
                     fprintf(stderr, "Error creating new JSON object\n");
-                    debug_exit NULL;
+                    debug_return NULL;
                 }
                 json_object_object_add(new_entry, "role", json_object_new_string("assistant"));
                 json_object_object_add(new_entry, "content", json_object_new_string(response_str));
@@ -538,13 +541,13 @@ static json_object *query_get_history(json_object *options) {
         new_entry = json_object_new_object();
         if (new_entry == NULL) {
             fprintf(stderr, "Error creating new JSON object\n");
-            debug_exit NULL;
+            debug_return NULL;
         }
         json_object_object_add(new_entry, "role", json_object_new_string("user"));
         json_object_object_add(new_entry, "content", json_object_object_get(options, SETTING_KEY_PROMPT));
         json_object_array_add(history_obj, new_entry);
     }
-    debug_exit history_obj;
+    debug_return history_obj;
 }
 
 static void setup_curl(json_object *query_obj, const char *endpoint, setup_curl_callback_t callback) {
@@ -572,12 +575,12 @@ static void setup_curl(json_object *query_obj, const char *endpoint, setup_curl_
     curl_easy_setopt(curl, CURLOPT_URL, endpoint);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
-    debug_exit;
+    debug_return;
 }
 
 static int string_compare(const void *a, const void *b) {
     debug_enter();
-    debug_exit strcmp(*(char **)a, *(char **)b);
+    debug_return strcmp(*(char **)a, *(char **)b);
 }
 
 static int option_emd_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -585,11 +588,11 @@ static int option_emd_validate(option_t *option, json_object *actions_obj, json_
     json_object *api_object = NULL;
     if (!json_object_object_get_ex(settings_obj, SETTING_KEY_AI_PROVIDER, &api_object)) {
         fprintf(stderr, "Error getting AI provider from settings\n");
-        debug_exit 1;
+        debug_return 1;
     }
     if (api_object == NULL || strcmp(json_object_get_string(api_object), ai_provider) != 0) {
         fprintf(stderr, "Error: AI provider is not %s\n", ai_provider);
-        debug_exit 1;
+        debug_return 1;
     }
     json_object_object_add(settings_obj, SETTING_KEY_EMBEDDING_MODEL, json_object_new_string(option->value));
     json_object *openai_obj = context_get(ai_provider);
@@ -597,12 +600,12 @@ static int option_emd_validate(option_t *option, json_object *actions_obj, json_
         openai_obj = json_object_new_object();
         if (openai_obj == NULL) {
             fprintf(stderr, "Error creating new JSON object\n");
-            debug_exit 1;
+            debug_return 1;
         }
     }
     json_object_object_add(openai_obj, SETTING_KEY_EMBEDDING_MODEL, json_object_new_string(option->value));
     context_set(ai_provider, openai_obj);
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int set_missing_emd(option_t *option, json_object *actions_obj, json_object *settings_obj) {
@@ -611,7 +614,7 @@ static int set_missing_emd(option_t *option, json_object *actions_obj, json_obje
     json_object *openai_obj = context_get(ai_provider);
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_EMBEDDING_MODEL, &value)) {
         debug("openai embedding model is set to %s\n", json_object_get_string(value));
-        debug_exit 0;
+        debug_return 0;
     }
     const char *m = NULL;
     if (openai_obj != NULL) {
@@ -629,11 +632,11 @@ static int set_missing_emd(option_t *option, json_object *actions_obj, json_obje
         openai_obj = json_object_new_object();
         if (openai_obj == NULL) {
             fprintf(stderr, "Error creating new JSON object\n");
-            debug_exit 1;
+            debug_return 1;
         }
     }
     json_object_object_add(openai_obj, SETTING_KEY_EMBEDDING_MODEL, json_object_new_string(m));
     debug("wrote %s to context file\n", json_object_to_json_string_ext(openai_obj, JSON_C_TO_STRING_PRETTY));
     context_set(ai_provider, openai_obj);
-    debug_exit 0;
+    debug_return 0;
 }

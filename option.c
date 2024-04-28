@@ -1,7 +1,10 @@
 /**
- * option.c
- * 
- * Functions for parsing command line options.
+ * @file option.c
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief Functions for parsing command line options.
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
  */
 
 #include <stdbool.h>
@@ -33,7 +36,7 @@ option_t **option_merge(option_t **options1, option_t **options2) {
     int n = n1 + n2 + 1;
     option_t **options = malloc((n) * sizeof(option_t *));
     if (options == NULL) {
-        debug_exit NULL;
+        debug_return NULL;
     }
     if (options1 != NULL) {
         memcpy(options, options1, n1 * sizeof(option_t *));
@@ -42,7 +45,7 @@ option_t **option_merge(option_t **options1, option_t **options2) {
         memcpy((void *)(((char *)options) + (n1 * sizeof(option_t *))), options2, n2 * sizeof(option_t *));
     }
     options[n - 1] = NULL;
-    debug_exit options;
+    debug_return options;
 }
 
 int option_parse_args(option_t **options, int ac, char **av, json_object *actions_obj, json_object *settings_obj) {
@@ -51,7 +54,7 @@ int option_parse_args(option_t **options, int ac, char **av, json_object *action
         option_t *option = match_option(options, av[i]);
         if (option == NULL) {
             fprintf(stderr, "Unrecognized option \"%s\"\n", av[i]);
-            debug_exit 1;
+            debug_return 1;
         }
         option->present = true;
         const char *equal = strchr(av[i], '=');
@@ -59,13 +62,13 @@ int option_parse_args(option_t **options, int ac, char **av, json_object *action
             case option_arg_none:
                 if (equal != NULL) {
                     fprintf(stderr, "Option \"%s\" does not take an argument\n", option->name);
-                    debug_exit 1;
+                    debug_return 1;
                 }
                 break;
             case option_arg_required:
                 if (equal == NULL) {
                     fprintf(stderr, "Option \"%s\" requires an argument\n", option->name);
-                    debug_exit 1;
+                    debug_return 1;
                 }
                 option->value = equal + 1;
                 break;
@@ -78,11 +81,11 @@ int option_parse_args(option_t **options, int ac, char **av, json_object *action
         if (option->validate != NULL) {
             int r = option->validate(option, actions_obj, settings_obj);
             if (r != 0) {
-                debug_exit 1;
+                debug_return 1;
             }
         }
     }
-    debug_exit 0;
+    debug_return 0;
 }
 
 int option_set_missing(option_t **options, json_object *actions_obj, json_object *settings_obj) {
@@ -97,12 +100,12 @@ int option_set_missing(option_t **options, json_object *actions_obj, json_object
             api_id_t opt_api = api_name_to_id(options[i]->api);
             if (options[i]->api == NULL || opt_api == api) {
                 if (options[i]->set_missing(options[i], actions_obj, settings_obj) != 0) {
-                    debug_exit 1;
+                    debug_return 1;
                 }
             }
         }
     }
-    debug_exit 0;
+    debug_return 0;
 }
 
 static option_t *match_option(option_t **options, char *s) {
@@ -121,7 +124,7 @@ static option_t *match_option(option_t **options, char *s) {
         }
         name = malloc(l + 1);
         if (name == NULL) {
-            debug_exit NULL;
+            debug_return NULL;
         }
         if (options[i]->api != NULL) {
             strcpy(name, options[i]->api);
@@ -134,10 +137,10 @@ static option_t *match_option(option_t **options, char *s) {
             l = equal;
         }
         if (strncmp(name, s, l) == 0) {
-            debug_exit options[i];
+            debug_return options[i];
         }
     }
-    debug_exit NULL;
+    debug_return NULL;
 }
 
 void option_show_help(option_t **options) {
@@ -162,7 +165,7 @@ void option_show_help(option_t **options) {
     fld_width += 3;
     char *s = malloc(fld_width + 1);
     if (s == NULL) {
-        debug_exit;
+        debug_return;
     }
     for (int i = 0; options[i] != NULL; i++) {
         char *sp = s;
@@ -189,5 +192,5 @@ void option_show_help(option_t **options) {
         }
         printf("    %s %s\n", s, options[i]->description);
     }
-    debug_exit;
+    debug_return;
 }

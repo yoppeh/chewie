@@ -1,7 +1,10 @@
 /**
- * input.c
- *
- * Handle reading input from stdin.
+ * @file input.c
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief Handle reading input from stdin.
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
  */
  
 #include <stdlib.h>
@@ -21,5 +24,5 @@ char *input_get(void) {
     while (fgets(input_buffer, INPUT_BUFFER_SIZE, stdin) != NULL) {
         file_append_tmp(&tmp_file, input_buffer);
     }
-    debug_exit file_read_tmp(&tmp_file);
+    debug_return file_read_tmp(&tmp_file);
 }

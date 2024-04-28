@@ -1,7 +1,10 @@
 /**
- * file.c
- *
- * File I/O operations.
+ * @file file.c
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief File I/O operations.
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
  */
 
 #include <dirent.h> 
@@ -25,12 +28,15 @@ int file_append_tmp(FILE **f, const char *s) {
         *f = tmpfile();
         if (*f == NULL) {
             perror("Error creating a temporary context file");
-            debug_exit 1;
+            debug_return 1;
         }
     }
+    debug("appending \"%s\" to temporary context file\n", s);
     fprintf(*f, "%s", s);
+    debug("flushing temporary context file\n");
     fflush(*f);
-    debug_exit 0;
+    debug("exiting\n");
+    debug_return 0;
 }
 
 int file_create_path(const char *path) {   
@@ -41,7 +47,7 @@ int file_create_path(const char *path) {
     mode_t mode = 0777;
     errno = 0;
     if (dir_exists(path)) {
-        debug_exit 0;
+        debug_return 0;
     }
     _path = strdup(path);
     if (_path == NULL)
@@ -59,7 +65,7 @@ int file_create_path(const char *path) {
     result = 0;
 out:
     free(_path);
-    debug_exit result;
+    debug_return result;
 }
 
 char *file_read(const char *filename) {
@@ -80,7 +86,7 @@ char *file_read(const char *filename) {
         goto err;
     }
     if (sb.st_size == 0) {
-        debug_exit NULL;
+        debug_return NULL;
     }
     c = malloc(sb.st_size + 1);
     if (c == NULL) {
@@ -93,12 +99,12 @@ char *file_read(const char *filename) {
     }
     c[sb.st_size] = 0; // Null-terminate
     close(fd);
-    debug_exit c;
+    debug_return c;
 err:
     if (fd > -1) {
         close(fd);
     }
-    debug_exit NULL;
+    debug_return NULL;
 }
 
 extern char *file_read_tmp(FILE **f) {
@@ -106,7 +112,7 @@ extern char *file_read_tmp(FILE **f) {
     if (*f != NULL) {
         if (fseek(*f, 0L, SEEK_END) == -1) {
             perror("Unable to determine size of temporary context file");
-            debug_exit NULL;
+            debug_return NULL;
         }
         long len = ftell(*f);
         rewind(*f);
@@ -115,9 +121,9 @@ extern char *file_read_tmp(FILE **f) {
         result[len] = 0; // Null-terminate
         fclose(*f);
         *f = NULL;
-        debug_exit result;
+        debug_return result;
     }
-    debug_exit NULL;
+    debug_return NULL;
 }
 
 void file_truncate(const char *filename) {
@@ -151,12 +157,12 @@ void file_write(const char *filename, const char *data) {
         goto err;
     }
     close(fd);
-    debug_exit;
+    debug_return;
 err:
     if (fd > -1) {
         close(fd);
     }
-    debug_exit;
+    debug_return;
 }
 
 static int dir_exists(const char *path) {
@@ -164,9 +170,9 @@ static int dir_exists(const char *path) {
     DIR *dir = opendir(path);
     if (dir) {
         closedir(dir);
-        debug_exit 1;
+        debug_return 1;
     }
-    debug_exit 0;
+    debug_return 0;
 }
 
 static int mk_dir(const char* path, mode_t mode) {
@@ -174,15 +180,15 @@ static int mk_dir(const char* path, mode_t mode) {
     struct stat st;
     errno = 0;
     if (mkdir(path, mode) == 0)
-        debug_exit 0;
+        debug_return 0;
     if (errno != EEXIST)
-        debug_exit -1;
+        debug_return -1;
     if (stat(path, &st) != 0)
-        debug_exit -1;
+        debug_return -1;
     if (!S_ISDIR(st.st_mode)) {
         errno = ENOTDIR;
-        debug_exit -1;
+        debug_return -1;
     }
     errno = 0;
-    debug_exit 0;
+    debug_return 0;
 }

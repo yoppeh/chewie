@@ -1,6 +1,11 @@
 /**
- * main.c
- *
+ * @file main.c
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief Main program.
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
+ * @details
  * Main program. Parses command line arguments into a JSON object. The results
  * of that are used first to execute any actions that are specified, such as
  * dumping the query history or listing the available models. Then, assuming 
@@ -29,8 +34,10 @@
 #include "ollama.h"
 #include "openai.h"
 
+#ifdef DEBUG
 int indent_level = 0;
-char *indent_string = "                                                                 ";
+char *indent_string = "                                                                                ";
+#endif
 
 int main(int ac, char **av) {
     debug_enter();
@@ -72,5 +79,5 @@ term:
         json_object_put(settings_obj);
     }
     debug("Exiting with result = %i\n", result);
-    debug_exit result;
+    debug_return result;
 }

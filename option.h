@@ -1,8 +1,12 @@
 /**
- * option.h
- * 
- * Functions for parsing command line options.
+ * @file option.h
+ * @author Warren Mann (warren@nonvol.io)
+ * @brief Functions for parsing command line options.
+ * @version 0.1.0
+ * @date 2024-04-27
+ * @copyright Copyright (c) 2024
  */
+
 #ifndef _OPTION_H
 #define _OPTION_H
 
