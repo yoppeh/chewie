@@ -272,14 +272,22 @@ static const char *query(json_object *options) {
     const char *embeddings = NULL;
     const char *system_prompt = NULL;
     enum json_tokener_error jerr;
+    debug("options: %s\n", json_object_to_json_string_ext(options, JSON_C_TO_STRING_PRETTY));
     if (ollama_init()) {
         debug_return NULL;
-    } 
+    }
     if (json_object_object_get_ex(options, SETTING_KEY_AI_HOST, &field_obj)) {
         host = json_object_get_string(field_obj);
     }
     if (json_object_object_get_ex(options, SETTING_KEY_PROMPT, &field_obj)) {
-        prompt_str = json_object_get_string(field_obj);
+        if (field_obj != NULL) {
+            debug("prompt found\n");
+            prompt_str = json_object_get_string(field_obj);
+        } else {
+            jerr = json_tokener_get_error(json);
+            fprintf(stderr, "JSON parse error: %s\n", json_tokener_error_desc(jerr));
+            goto term;
+        }
     } else {
         jerr = json_tokener_get_error(json);
         fprintf(stderr, "JSON parse error: %s\n", json_tokener_error_desc(jerr));

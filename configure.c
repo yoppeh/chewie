@@ -1,7 +1,7 @@
 /**
  * @file configure.c
  * @author Warren Mann (warren@nonvol.io)
- * @brief Configure environment and setup actions./**
+ * @brief Configure environment and setup actions.
  * @version 0.1.0
  * @date 2024-04-27
  * @copyright Copyright (c) 2024
@@ -170,6 +170,7 @@ static option_t **options = common_options;
 static int merge_api_options(void);
 
 int configure(json_object *actions_obj, json_object *settings_obj, int ac, char **av) {
+    json_object *context_fn_obj = NULL;
     debug_enter();
     if (merge_api_options()) {
         debug_return 1;
@@ -179,6 +180,16 @@ int configure(json_object *actions_obj, json_object *settings_obj, int ac, char 
         debug("configure() option_parse_args() failed\n");
         debug_return 1;
     }
+    debug("checking for context filename\n");
+    if ((context_fn_obj = json_object_object_get(settings_obj, SETTING_KEY_CONTEXT_FILENAME)) == NULL) {
+        debug("context filename not found\n");
+        if (set_missing_ctx(NULL, actions_obj, settings_obj)) {
+            debug("configure() set_missing_ctx() failed\n");
+            debug_return 1;
+        }
+    } else {
+        context_load(json_object_get_string(context_fn_obj));
+    }   
     option_set_missing(options, actions_obj, settings_obj);
     debug("actions_obj = %s\n", json_object_to_json_string(actions_obj));
     if (context_set_ai_host(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_HOST)))) {
@@ -293,8 +304,8 @@ static int set_missing_ctx(option_t *option, json_object *actions_obj, json_obje
             goto term;
         }
     }
-    char *d = (char *)context_dir_default;
-    char *h = getenv("HOME");
+    const char *d = (char *)context_dir_default;
+    const char *h = getenv("HOME");
     int l = strlen(h);
     l++;
     l += strlen(d);
@@ -448,13 +459,8 @@ static int option_mdl_validate(option_t *option, json_object *actions_obj, json_
 static int option_qry_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     if (option->value != NULL) {
-        if (option->value == NULL) {
-            json_object_object_add(settings_obj, SETTING_KEY_PROMPT, NULL);
-            json_object_object_add(actions_obj, ACTION_KEY_QUERY, NULL);
-        } else {
-            json_object_object_add(settings_obj, SETTING_KEY_PROMPT, json_object_new_string(option->value));
-            json_object_object_add(actions_obj, ACTION_KEY_QUERY, json_object_new_string(option->value));
-        }
+        json_object_object_add(settings_obj, SETTING_KEY_PROMPT, json_object_new_string(option->value));
+        json_object_object_add(actions_obj, ACTION_KEY_QUERY, json_object_new_string(option->value));
     } else {
         json_object_object_add(actions_obj, ACTION_KEY_QUERY, NULL);
     }

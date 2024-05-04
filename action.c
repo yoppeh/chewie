@@ -176,9 +176,8 @@ static action_result_t query(json_object *settings, json_object *data) {
     debug_enter();
     char *query = NULL;
     json_object *prompt = NULL;
-    if (json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &prompt) && prompt != NULL) {
-        json_object_object_add(settings, SETTING_KEY_PROMPT, prompt);
-    } else {
+    json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &prompt);
+    if (prompt == NULL) {
         query = input_get();
         if (query != NULL) {
             json_object_object_add(settings, SETTING_KEY_PROMPT, json_object_new_string(query));
