@@ -1,7 +1,7 @@
 /**
  * @file configure.h
  * @author Warren Mann (warren@nonvol.io)
- * @brief Configure environment and setup actions./**
+ * @brief Configure environment and setup actions.
  * @version 0.1.0
  * @date 2024-04-27
  * @copyright Copyright (c) 2024

@@ -8,7 +8,7 @@
  */
 
 #ifndef _GROQ_H
-#define _QROQ_H
+#define _GROQ_H
 
 #include "api.h"
 
