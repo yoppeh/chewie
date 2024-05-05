@@ -180,7 +180,6 @@ int configure(json_object *actions_obj, json_object *settings_obj, int ac, char 
         debug("configure() option_parse_args() failed\n");
         debug_return 1;
     }
-    debug("checking for context filename\n");
     if ((context_fn_obj = json_object_object_get(settings_obj, SETTING_KEY_CONTEXT_FILENAME)) == NULL) {
         debug("context filename not found\n");
         if (set_missing_ctx(NULL, actions_obj, settings_obj)) {

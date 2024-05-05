@@ -38,12 +38,10 @@ static const char ai_provider[] = "groq";
 
 static CURL *curl = NULL;
 static struct json_tokener *json = NULL;
-static json_object *query_obj = NULL;
 static json_object *updates_obj = NULL;
 static const char *context_fn = NULL;
 static char *auth_header = NULL;
 static FILE *tmp_response = NULL;
-static const char *prompt_str = NULL;
 static int64_t timestamp = 0;
 
 static const char *get_access_token(void);
@@ -121,7 +119,7 @@ static option_t **get_options(void) {
 static const char *get_default_host(void) {
     debug_enter();
     char *host = NULL;
-    char *s = getenv("GROQ_HOST");
+    const char *s = getenv("GROQ_HOST");
     if (s != NULL) {
         int l = strlen(s) + 1;
         if (strncmp(s, "http://", sizeof("http://") - 1) != 0 && strncmp(s, "https://", sizeof("https://") - 1) != 0) {
@@ -335,7 +333,7 @@ static size_t print_model_list_callback(void *contents, size_t size, size_t nmem
     int model_count = array_list_length(models);
     char **model_names = malloc(model_count * sizeof(char *));
     if (model_names == NULL) {
-        fprintf(stderr, "Error allocating %lu bytes of memory for model names\n", model_count * sizeof(char *));
+        fprintf(stderr, "Error allocating %zu bytes of memory for model names\n", model_count * sizeof(char *));
         debug_return 0;
     }
     for (int i = 0; i < model_count; i++) {
@@ -362,12 +360,12 @@ static const char *query(json_object *options) {
     json_object *query_obj = NULL; 
     json_object *json_obj = NULL;
     json_object *field_obj = NULL;
+    json_object *prompt_obj = NULL;
     const char *response = NULL;
     char *endpoint = NULL;
     const char *host = default_host;
     const char *model = default_model;
-    const char *context = NULL;
-    enum json_tokener_error jerr;
+    const char *prompt_str = NULL;
     if (groq_init()) {
         debug_return NULL;
     }
@@ -381,6 +379,25 @@ static const char *query(json_object *options) {
         goto term;
     }
     messages_obj = query_get_history(options);
+    if (json_object_object_get_ex(options, SETTING_KEY_PROMPT, &prompt_obj)) {
+        json_object *user_obj = json_object_new_object();
+        if (user_obj == NULL) {
+            fprintf(stderr, "Error creating new JSON object\n");
+            goto term;
+        }
+        if (json_object_object_add(user_obj, "role", json_object_new_string("user")) != 0) {
+            fprintf(stderr, "Error adding role to JSON object\n");
+            goto term;
+        }
+        if (json_object_object_add(user_obj, "content", prompt_obj) != 0) {
+            fprintf(stderr, "Error adding content to JSON object\n");
+            goto term;
+        }
+        if (json_object_array_add(messages_obj, user_obj) != 0) {
+            fprintf(stderr, "Error adding user message to JSON object\n");
+            goto term;
+        }
+    }
     query_obj = json_object_new_object();
     if (query_obj == NULL || messages_obj == NULL) {
         fprintf(stderr, "Error creating new JSON object\n");
@@ -396,7 +413,6 @@ static const char *query(json_object *options) {
     }
     debug("Completed query\n");
     timestamp = time(NULL);
-    json_object *prompt_obj = NULL;
     if (json_object_object_get_ex(options, SETTING_KEY_PROMPT, &prompt_obj)) {
         if (prompt_obj != NULL) {
             prompt_str = json_object_get_string(prompt_obj);

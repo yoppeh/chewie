@@ -38,12 +38,10 @@ static const char ai_provider[] = "openai";
 
 static CURL *curl = NULL;
 static struct json_tokener *json = NULL;
-static json_object *query_obj = NULL;
 static json_object *updates_obj = NULL;
 static const char *context_fn = NULL;
 static char *auth_header = NULL;
 static FILE *tmp_response = NULL;
-static const char *prompt_str = NULL;
 static int64_t timestamp = 0;
 
 static const char *get_access_token(void);
@@ -121,7 +119,7 @@ static option_t **get_options(void) {
 static const char *get_default_host(void) {
     debug_enter();
     char *host = NULL;
-    char *s = getenv("OPENAI_HOST");
+    const char *s = getenv("OPENAI_HOST");
     if (s != NULL) {
         int l = strlen(s) + 1;
         if (strncmp(s, "http://", sizeof("http://") - 1) != 0 && strncmp(s, "https://", sizeof("https://") - 1) != 0) {
@@ -150,13 +148,8 @@ static int get_embeddings(json_object *settings) {
     CURLcode res;
     json_object *query_obj = NULL; 
     json_object *json_obj = NULL;
-    json_object *field_obj = NULL;
-    const char *response = NULL;
     char *endpoint = NULL;
     const char *host = default_host;
-    const char *model = default_model;
-    const char *context = NULL;
-    enum json_tokener_error jerr;
     if (openai_init()) {
         debug_return 1;
     }
@@ -180,7 +173,6 @@ static int get_embeddings(json_object *settings) {
         fprintf(stderr, "API request error: %s\n", curl_easy_strerror(res));
         debug_return 1;
     }
-term:
     openai_exit();
     debug_return 0;
 }
@@ -336,7 +328,7 @@ static size_t print_model_list_callback(void *contents, size_t size, size_t nmem
     int model_count = array_list_length(models);
     char **model_names = malloc(model_count * sizeof(char *));
     if (model_names == NULL) {
-        fprintf(stderr, "Error allocating %lu bytes of memory for model names\n", model_count * sizeof(char *));
+        fprintf(stderr, "Error allocating %zu bytes of memory for model names\n", model_count * sizeof(char *));
         debug_return 0;
     }
     for (int i = 0; i < model_count; i++) {
@@ -363,12 +355,12 @@ static const char *query(json_object *options) {
     json_object *query_obj = NULL; 
     json_object *json_obj = NULL;
     json_object *field_obj = NULL;
+    json_object *prompt_obj = NULL;
     const char *response = NULL;
+    const char *prompt_str = NULL;
     char *endpoint = NULL;
     const char *host = default_host;
     const char *model = default_model;
-    const char *context = NULL;
-    enum json_tokener_error jerr;
     if (openai_init()) {
         debug_return NULL;
     }
@@ -382,6 +374,25 @@ static const char *query(json_object *options) {
         goto term;
     }
     messages_obj = query_get_history(options);
+    if (json_object_object_get_ex(options, SETTING_KEY_PROMPT, &prompt_obj)) {
+        json_object *user_obj = json_object_new_object();
+        if (user_obj == NULL) {
+            fprintf(stderr, "Error creating new JSON object\n");
+            goto term;
+        }
+        if (json_object_object_add(user_obj, "role", json_object_new_string("user")) != 0) {
+            fprintf(stderr, "Error adding role to JSON object\n");
+            goto term;
+        }
+        if (json_object_object_add(user_obj, "content", prompt_obj) != 0) {
+            fprintf(stderr, "Error adding content to JSON object\n");
+            goto term;
+        }
+        if (json_object_array_add(messages_obj, user_obj) != 0) {
+            fprintf(stderr, "Error adding user message to JSON object\n");
+            goto term;
+        }
+    }
     query_obj = json_object_new_object();
     if (query_obj == NULL || messages_obj == NULL) {
         fprintf(stderr, "Error creating new JSON object\n");
@@ -396,7 +407,6 @@ static const char *query(json_object *options) {
         goto term;
     }
     timestamp = time(NULL);
-    json_object *prompt_obj = NULL;
     if (json_object_object_get_ex(options, SETTING_KEY_PROMPT, &prompt_obj)) {
         prompt_str = json_object_get_string(prompt_obj);
     }
@@ -442,7 +452,7 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
             }
             if (json_object_object_get_ex(choice, "message", &message)) {
                 if (json_object_object_get_ex(message, "content", &content)) {
-                    char *s = (char *)json_object_get_string(content);
+                    const char *s = (char *)json_object_get_string(content);
                     printf("%s\n", s);
                     file_append_tmp(&tmp_response, s);
                 } else {
@@ -471,18 +481,12 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
 
 static json_object *query_get_history(json_object *options) {
     debug_enter();
-    const char *fn = NULL;
-    const char *context = NULL;
-    json_object *context_obj = NULL;
     json_object *history_obj = NULL;
     json_object *system_prompt_obj = NULL;
     json_object *context_history_obj = NULL;
-    json_object *field_obj = NULL;
     json_object *new_entry;
-    array_list *context_history_array = NULL;
     bool system_prompt = false;
     int context_history_count = 0;
-    int history_count = 1;
     history_obj = json_object_new_array();
     if (history_obj == NULL) {
         fprintf(stderr, "Error creating new JSON object\n");
@@ -500,9 +504,7 @@ static json_object *query_get_history(json_object *options) {
         system_prompt = true;
     }
     if ((context_history_obj = context_get_history()) != NULL) {
-        context_history_array = json_object_get_array(context_history_obj);
         context_history_count = json_object_array_length(context_history_obj);
-        history_count += context_history_count;
     }
     for (int i = 0; i < context_history_count; i++) {
         json_object *entry = json_object_array_get_idx(context_history_obj, i);
