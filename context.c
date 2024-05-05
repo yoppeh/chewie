@@ -108,6 +108,9 @@ void context_new(const char *fn) {
     debug_enter();
     context_fn = fn;
     debug("creating new context_obj\n");
+    if (context_obj != NULL) {
+        json_object_put(context_obj);
+    }
     context_obj = json_object_new_object();
     debug_return;
 }

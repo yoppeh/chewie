@@ -189,6 +189,14 @@ int configure(json_object *actions_obj, json_object *settings_obj, int ac, char 
     } else {
         context_load(json_object_get_string(context_fn_obj));
     }   
+    if (option_r.present) {
+        debug("resetting context\n");
+        if (context_fn_obj != NULL) {
+            context_new(json_object_get_string(context_fn_obj));
+        } else {
+            context_new(context_fn_default);
+        }
+    }
     option_set_missing(options, actions_obj, settings_obj);
     debug("actions_obj = %s\n", json_object_to_json_string(actions_obj));
     if (context_set_ai_host(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_HOST)))) {
