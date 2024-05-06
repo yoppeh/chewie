@@ -5,6 +5,8 @@
 # 	all
 #       The default target, if no target is specified. Compiles source files
 #       as necessary and links them into the final executable.
+#   bear
+#	   Generates a compile_commands.json file for use with LSPs.
 #   clean
 #       Removes all object files and executables.
 #   install
@@ -52,9 +54,13 @@ LIBS = -lcurl -ljson-c
 
 OBJS = main.o action.o api.o configure.o context.o file.o groq.o input.o ollama.o openai.o option.o
 
-.PHONY: all clean install uninstall
+.PHONY: all bear clean install uninstall
 
 all: chewie
+
+bear:
+	make clean
+	bear -- make
 
 clean:
 	- rm -f chewie
