@@ -487,7 +487,7 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
         fprintf(stderr, "Response doesn't appear to be a JSON object:\n%*s\n", (int)nmemb, (char *)contents);
         debug_return 0;
     }
-    debug("exiting query callback with %d nmemb\n", nmemb);
+    debug("exiting query callback with %zu nmemb\n", nmemb);
     debug_return nmemb;
 }
 
