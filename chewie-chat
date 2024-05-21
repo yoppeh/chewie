@@ -6,21 +6,16 @@
 #
 
 echo "Setting up chewie-chat... "
-if [ "$CHEWIE_API" == "ollama" ]; then
-CHEWIECHAT_MODEL="llama2-uncensored:latest"
-echo "Using ollama API"
-elif [ "$CHEWIE_API" == "openai" ]; then
-CHEWIECHAT_MODEL="gpt-3.5-turbo"
-echo "Using OpenAI API"
-elif [ "$CHEWIE_API" == "groq" ] ; then
-echo "Using Groq API"
-CHEWIECHAT_MODEL="llama3-8b-8192"
-else
-CHEWIE_API=ollama
-CHEWIECHAT_MODEL="llama2-uncensored:latest"
-echo "Using ollama API"
+if [ x"$CHEWIECHAT_API" == "x" ] ; then
+    CHEWIECHAT_API="openai"
 fi
-echo "Using API \"$CHEWIE_API\""
+if [ x"$CHEWIECHAT_MODEL" == "x" ] ; then
+    CHEWIECHAT_MODEL="gpt-4o"
+fi
+if [ x"$CHEWIECHAT_API" == "xopenai" ] ; then
+    CHEWIECHAT_HOST="https://api.openai.com"
+fi
+echo "Using API \"$CHEWIECHAT_API\""
 echo "Using model \"$CHEWIECHAT_MODEL\""
 
 CHEWIECHAT_CONTEXT_FILENAME=chewie-chat-context.json
@@ -48,11 +43,11 @@ while [ 1 ] ; do
         exit 0
     elif [ x"$input" == "x/r" ] ; then
         echo "Resetting context..."
-        chewie r u mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" > /dev/null
+        chewie r u aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" > /dev/null
         echo "context file reset"
         continue
     fi
     echo -n "chewie > "
-    echo "$input" | chewie mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE"
+    echo "$input" | chewie aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" aih="$CHEWIECHAT_HOST" ctx="$CHEWIECHAT_CONTEXT_FILE"
 done
 
