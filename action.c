@@ -206,6 +206,11 @@ static action_result_t reset_context(json_object *settings, json_object *options
     json_object *context_fn = NULL;
     if (json_object_object_get_ex(settings, SETTING_KEY_CONTEXT_FILENAME, &context_fn)) {
         const char *fn = json_object_get_string(context_fn);
+        if (fn != NULL) {
+            context_new(fn);
+        } else {
+            context_new(context_fn_default);
+        }
         file_truncate(fn);
         debug_return ACTION_CONTINUE;
     }
@@ -214,6 +219,7 @@ static action_result_t reset_context(json_object *settings, json_object *options
 
 static action_result_t update_context(json_object *settings, json_object *data) {
     debug_enter();
+    context_update();
     debug("settings = %s\n", json_object_to_json_string_ext(settings, JSON_C_TO_STRING_PRETTY));
     debug_return ACTION_END;
 }
