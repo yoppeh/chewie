@@ -427,11 +427,13 @@ term:
 
 static size_t query_callback(void *contents, size_t size, size_t nmemb, void *user_data) {
     debug_enter();
+    debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     static json_object *json_obj = NULL;
     enum json_tokener_error jerr;
     json_obj = json_tokener_parse_ex(json, contents, nmemb);
     jerr = json_tokener_get_error(json);
     if (jerr == json_tokener_continue) {
+        debug("Response: %s\n", (char *)contents);
         debug_return nmemb;
     }
     if (jerr != json_tokener_success) {
@@ -440,6 +442,7 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
     }
     enum json_type type = json_object_get_type(json_obj);
     if (type == json_type_object) {
+        debug("Response: %s\n", json_object_to_json_string_ext(json_obj, JSON_C_TO_STRING_PLAIN));
         json_object *choices = NULL;
         json_object *error = NULL;
         if (json_object_object_get_ex(json_obj, "choices", &choices)) {
