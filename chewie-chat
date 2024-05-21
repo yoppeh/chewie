@@ -30,12 +30,28 @@ export CHEWIECHAT_CONTEXT_FILE=$CHEWIECHAT_CONTEXT_PATH/$CHEWIECHAT_CONTEXT_FILE
 echo "Using context file \"$CHEWIECHAT_CONTEXT_FILE\""
 mkdir -p $CHEWIECHAT_CONTEXT_PATH
 
-chewie r u mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are an intelligent assistant. You will answer my questions concisely and accurately. If you do not know the answer to a question, simply state that you do not know the answer." > /dev/null
-echo "done!"
 echo "Press Ctrl-C to exit."
 
 while [ 1 ] ; do
     read -p "$USER > " input
+    if [ x"$input" == "x/h" ] ; then
+        echo "commands:"
+        echo "/h - help (this) text"
+        echo "/l - show context history"
+        echo "/q - quit"
+        echo "/r - reset context file"
+        continue
+    elif [ x"$input" == "x/l" ] ; then
+        chewie ctx="$CHEWIECHAT_CONTEXT_FILE" his
+        continue
+    elif [ x"$input" == "x/q" ] ; then
+        exit 0
+    elif [ x"$input" == "x/r" ] ; then
+        echo "Resetting context..."
+        chewie r u mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" > /dev/null
+        echo "context file reset"
+        continue
+    fi
     echo -n "chewie > "
     echo "$input" | chewie mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE"
 done
