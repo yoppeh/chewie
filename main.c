@@ -27,7 +27,6 @@
 #include "configure.h"
 #include "context.h"
 #include "file.h"
-#include "groq.h"
 #include "input.h"
 #include "option.h"
 #include "setting.h"
