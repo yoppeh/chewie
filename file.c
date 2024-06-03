@@ -136,6 +136,7 @@ void file_truncate(const char *filename) {
     if ((fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, mode)) > -1) {
         close(fd);
     }
+    debug_return;
 }
 
 void file_write(const char *filename, const char *data) {

@@ -18,6 +18,7 @@
 #include "configure.h"
 #include "context.h"
 #include "file.h"
+#include "function.h"
 #include "input.h"
 #include "setting.h"
 
@@ -25,6 +26,7 @@ static action_result_t dump_query_history(json_object *settings, json_object *da
 static action_result_t get_embeddings(json_object *settings, json_object *data);
 static action_result_t list_apis(json_object *settings, json_object *data);
 static action_result_t list_models(json_object *settings, json_object *data);
+static action_result_t load_function_file(json_object *settings, json_object *data);
 static action_result_t query(json_object *settings, json_object *data);
 static action_result_t show_help(json_object *settings, json_object *data);
 static action_result_t show_version(json_object *settings, json_object *data);
@@ -46,6 +48,10 @@ static action_t action_list_apis = {
 static action_t action_list_models = {
     .name = ACTION_KEY_LIST_MODELS,
     .callback = list_models,
+};
+static action_t action_load_function_file = {
+    .name = ACTION_KEY_LOAD_FUNCTION_FILE,
+    .callback = load_function_file,
 };
 static action_t action_query = {
     .name = ACTION_KEY_QUERY,
@@ -72,6 +78,7 @@ static action_t *action_templates[] = {
     &action_help,
     &action_list_apis,
     &action_list_models,
+    &action_load_function_file,
     &action_reset_context,
     &action_dump_query_history,
     &action_update_context,
@@ -104,6 +111,7 @@ action_result_t action_execute_all(json_object *actions, json_object *settings) 
     action_result_t result = ACTION_CONTINUE;
     for (int i = 0; merged_actions[i] != NULL; i++) {
         action_t *action_template = merged_actions[i];
+        debug("processing action %s\n", action_template->name);
         if (json_object_object_get_ex(actions, action_template->name, &json_obj)) {
             if (action_template->callback != NULL) {
                 action_result_t r = action_template->callback(settings, json_obj);
@@ -187,6 +195,19 @@ static action_result_t query(json_object *settings, json_object *data) {
     }
     api_interface->query(settings);
     debug_return ACTION_END;
+}
+
+static action_result_t load_function_file(json_object *settings, json_object *data) {
+    debug_enter();
+    const char *fn = json_object_get_string(data);
+    if (fn != NULL) {
+        debug("lua filename is %s\n", fn);
+        if (function_load(fn, settings)) {
+            debug_return ACTION_ERROR;
+        }
+        debug_return ACTION_CONTINUE;
+    }
+    debug_return ACTION_ERROR;
 }
 
 static action_result_t show_help(json_object *settings, json_object *data) {

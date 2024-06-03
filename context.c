@@ -245,10 +245,17 @@ term:
 
 json_object *context_get_history(void) {
     debug_enter();
+    json_object *history_obj = NULL;
     if (context_obj == NULL) {
+        debug("No context object\n");
         debug_return NULL;
     }
-    debug_return json_object_object_get(context_obj, CONTEXT_KEY_HISTORY);
+    if (!json_object_object_get_ex(context_obj, CONTEXT_KEY_HISTORY, &history_obj)) {
+        debug("No history object\n");
+        debug_return NULL;
+    }
+    debug("history_obj: %s\n", json_object_to_json_string_ext(history_obj, JSON_C_TO_STRING_PRETTY));
+    debug_return history_obj;
 }
 
 const char *context_get_history_prompt(json_object *entry) {
@@ -350,7 +357,6 @@ void context_update(void) {
     debug_enter();
     debug("writing context file \"%s\"\n", context_fn);
     const char *s = json_object_to_json_string_ext(context_obj, JSON_C_TO_STRING_PRETTY);
-    debug("context:\n\"%s\"\n", s);
     file_write(context_fn, s);
     debug_return;
 }
@@ -359,7 +365,6 @@ json_object *read_context_file(const char *fn) {
     debug_enter();
     const char *context = NULL;
     json_tokener *json = NULL;
-    json_object *context_obj = NULL;
     if (fn == NULL) {
         fprintf(stderr, "No context filename\n");
         debug_return NULL;

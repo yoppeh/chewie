@@ -2,7 +2,7 @@
 #
 # qc 
 #
-# script that uses chewie to implement a git-specific chat bot.
+# script that uses chewie to implement a c-specific chat bot.
 #
 
 if [ "$CHEWIE_API" == "ollama" ]; then

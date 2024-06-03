@@ -44,6 +44,7 @@ static int option_aip_validate(option_t *option, json_object *actions_obj, json_
 static int option_ctx_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_buf_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_emb_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
+static int option_fun_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_his_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_mdl_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int option_qry_validate(option_t *option, json_object *actions_obj, json_object *settings_obj);
@@ -75,6 +76,14 @@ static option_t option_aih = {
     .value = NULL,
     .validate = option_aih_validate,
     .set_missing = set_missing_aih
+};
+static option_t option_fun = {
+    .name = "fun",
+    .description = "File from which to load functions.",
+    .arg_type = option_arg_required,
+    .value = NULL,
+    .validate = option_fun_validate,
+    .set_missing = NULL
 };
 static option_t option_mdl = {
     .name = "mdl",
@@ -155,6 +164,7 @@ static option_t *common_options[] = {
     &option_aih,
     &option_ctx,
     &option_emb,
+    &option_fun,
     &option_his,
     &option_mdl,
     &option_qry,
@@ -443,6 +453,12 @@ static int option_ctx_validate(option_t *option, json_object *actions_obj, json_
 static int option_emb_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_GET_EMBEDDINGS, json_object_new_string(option->value));
+    debug_return 0;
+}
+
+static int option_fun_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
+    debug_enter();
+    json_object_object_add(actions_obj, ACTION_KEY_LOAD_FUNCTION_FILE, json_object_new_string(option->value));
     debug_return 0;
 }
 

@@ -13,7 +13,7 @@
  * models for example, exits after printing the list), the correct API 
  * interface is selected and the query is sent to the API.
  */
- 
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,6 +27,7 @@
 #include "configure.h"
 #include "context.h"
 #include "file.h"
+#include "function.h"
 #include "input.h"
 #include "option.h"
 #include "setting.h"
@@ -45,6 +46,9 @@ int main(int ac, char **av) {
     int result = 1;
     if (actions_obj == NULL) {
         fprintf(stderr, "Error initializing JSON object\n");
+        goto term;
+    }
+    if (function_init()) {
         goto term;
     }
     if (configure(actions_obj, settings_obj, ac, av)) {

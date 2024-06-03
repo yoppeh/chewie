@@ -20,6 +20,7 @@
 #define ACTION_KEY_VERSION              "version"
 #define ACTION_KEY_LIST_APIS            "list-apis"
 #define ACTION_KEY_LIST_MODELS          "list-models"
+#define ACTION_KEY_LOAD_FUNCTION_FILE   "load-function-file"
 #define ACTION_KEY_RESET_CONTEXT        "reset-context"
 #define ACTION_KEY_BUFFERED             "buffered"
 #define ACTION_KEY_DUMP_QUERY_HISTORY   "dump-query-history"

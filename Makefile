@@ -50,9 +50,9 @@ ifeq ($(prefix),)
 prefix = /usr/local
 endif
 
-LIBS = -lcurl -ljson-c
+LIBS = -lcurl -ljson-c -llua
 
-OBJS = main.o action.o api.o configure.o context.o file.o input.o ollama.o openai.o option.o
+OBJS = main.o action.o api.o configure.o context.o file.o function.o input.o ollama.o openai.o option.o
 
 .PHONY: all bear clean install uninstall
 
@@ -71,6 +71,7 @@ api.o : chewie.h api.h ollama.h openai.h
 configure.o : chewie.h action.h api.h configure.h context.h file.h option.h
 context.o : chewie.h context.h file.h
 file.o : chewie.h file.h
+function.o : chewie.h function.h
 input.o : chewie.h file.h input.h
 main.o : chewie.h action.h configure.h context.h file.h input.h ollama.h openai.h
 ollama.o : chewie.h api.h context.h file.h ollama.h setting.h

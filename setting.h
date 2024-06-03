@@ -19,9 +19,11 @@
 #define SETTING_KEY_HELP                    "help"
 #define SETTING_KEY_AI_HOST                 "ai-host"
 #define SETTING_KEY_AI_MODEL                "ai-model"
+#define SETTING_KEY_FUNCTION_FILE           "function-file"
 #define SETTING_KEY_PROMPT                  "prompt"
 #define SETTING_KEY_SYSTEM_PROMPT           "system-prompt"
 #define SETTING_KEY_SYSTEM_PROMPT_PROMPT    "prompt"
 #define SETTING_KEY_SYSTEM_PROMPT_EXIT      "exit"
+#define SETTING_KEY_TOOLS                   "tools"
 
 #endif // _SETTING_H
