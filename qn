@@ -32,7 +32,8 @@ if [ "$1" == "-s" ] ; then
     echo "Using model \"$QN_MODEL\""
     echo "Using context file \"$QN_CONTEXT\""
     mkdir -p $QN_CONTEXT_PATH
-    chewie r u ctx="$QN_CONTEXT" mdl="$QN_MODEL" sys="You are an intelligent assistant helping me use NixOS. All of your responses should be in the context of using NixOS. If you do not know the answer to a question, just say \"I don\'t know\"." > /dev/null
+    chewie r u ctx="$QN_CONTEXT" > /dev/null
+    chewie u ctx="$QN_CONTEXT" mdl="$QN_MODEL" sys="You are an intelligent assistant helping me use NixOS. All of your responses should be in the context of using NixOS. If you do not know the answer to a question, just say \"I don\'t know\"." > /dev/null
     echo "done!"
     exit 0
 fi

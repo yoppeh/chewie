@@ -33,7 +33,8 @@ if [ "$1" == "-s" ] ; then
     echo "Using model \"$QG_MODEL\""
     echo "Using context file \"$QG_CONTEXT\""
     mkdir -p $QG_CONTEXT_PATH
-    chewie r u ctx="$QG_CONTEXT" mdl="$QG_MODEL" sys="You are an intelligent assistant helping me with source code management using git. All of your responses should be in the context of using git for source code management. If you do not know the answer to a question, just say \"I don't know\"." > /dev/null
+    chewie r u ctx="$QG_CONTEXT" > /dev/null
+    chewie u ctx="$QG_CONTEXT" mdl="$QG_MODEL" sys="You are an intelligent assistant helping me use git on Linux. All of your responses should be in the context of using git on Linux. If you do not know the answer to a question, just say \"I don\'t know\"." > /dev/null
     echo "done!"
     exit 0
 fi

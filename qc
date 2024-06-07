@@ -33,7 +33,8 @@ if [ "$1" == "-s" ] ; then
     echo "Using model \"$QC_MODEL\""
     echo "Using API \"$CHEWIE_API\""d
     echo "Using context file \"$QC_CONTEXT\""
-    chewie r u ctx="$QC_CONTEXT" mdl="$QC_MODEL" sys="You are an intelligent assistant helping me write computer programs in the C language on Linux. All of your responses should be in the context of using the C programming language on Linux. If you do not know the answer to a question, just say \"I don't know\"." > /dev/null
+    chewie r u ctx="$QC_CONTEXT" > /dev/null
+    chewie u ctx="$QC_CONTEXT" mdl="$QC_MODEL" sys="You are an intelligent assistant helping me write computer programs in the C language on Linux. All of your responses should be in the context of using the C programming language on Linux. If you do not know the answer to a question, just say \"I don't know\"." > /dev/null
     echo "done!"
     exit 0
 fi

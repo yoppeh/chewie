@@ -17,6 +17,9 @@ fi
 
 QB_CONTEXT_PATH=~/.cache/chewie
 QB_CONTEXT=$QB_CONTEXT_PATH/qb-context.json
+if [ ! -f $QB_CONTEXT ]; then
+    init_context()
+fi
 
 if [ "$1" == "-h" ] ; then
     echo "Usage: qb [options]"
@@ -32,6 +35,7 @@ if [ "$1" == "-s" ] ; then
     echo "Using model \"$QB_MODEL\""
     echo "Using context file \"$QB_CONTEXT\""
     mkdir -p $QB_CONTEXT_PATH
+    chewie r u ctx="$QB_CONTEXT" > /dev/null
     chewie r u ctx="$QB_CONTEXT" mdl="$QB_MODEL" sys="You are an intelligent assistant helping me use bash on Linux. All of your responses should be in the context of using bash on Linux. If you do not know the answer to a question, just say \"I don\'t know\"." > /dev/null
     echo "done!"
     exit 0
