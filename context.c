@@ -227,7 +227,7 @@ const char *context_get_system_prompt(void) {
     debug_enter();
     json_object *system_prompt_obj = NULL;
     const char *system_prompt = NULL;
-    const char *result = NULL;
+    const char *result = "";
     if (context_obj == NULL) {
         goto term;
     }
