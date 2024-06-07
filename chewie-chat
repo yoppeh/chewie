@@ -31,7 +31,8 @@ if [ ! -f $CHEWIECHAT_CONTEXT_FILE ] ; then
     echo "context file created"
 fi
 
-echo "Press Ctrl-C to exit."
+echo "Enter /h for command help."
+echo "Press Ctrl-C or enter /q to exit."
 
 while [ 1 ] ; do
     read -p "$USER > " input
