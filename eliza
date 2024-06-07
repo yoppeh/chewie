@@ -33,7 +33,8 @@ if [ "$1" == "-s" ] ; then
     echo "Using model \"$ELIZA_MODEL\""
     echo "Using context file \"$ELIZA_CONTEXT\""
     mkdir -p $ELIZA_CONTEXT_PATH
-    chewie r u ctx="$ELIZA_CONTEXT" mdl="$ELIZA_MODEL" sys="You are an intelligent assistant in a friendly conversation with me. Offer advice and support. Your name is ELIZA. My name is ${USER}." > /dev/null
+    chewie r u ctx="$ELIZA_CONTEXT" mdl="$ELIZA_MODEL" > /dev/null
+    chewie u ctx="$ELIZA_CONTEXT" mdl="$ELIZA_MODEL" sys="You are an intelligent assistant in a friendly conversation with me. Offer advice and support. Your name is ELIZA. My name is ${USER}." > /dev/null
     echo "done!"
     exit 0
 fi

@@ -26,7 +26,8 @@ echo "Using context file \"$CHEWIECHAT_CONTEXT_FILE\""
 mkdir -p $CHEWIECHAT_CONTEXT_PATH
 if [ ! -f $CHEWIECHAT_CONTEXT_FILE ] ; then
     echo "Creating context file..."
-    create_ctx()
+    chewie r u ctx="$CHEWIECHAT_CONTEXT_FILE" > /dev/null
+    chewie u aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are a helpful assistant." > /dev/null
     echo "context file created"
 fi
 
@@ -48,16 +49,11 @@ while [ 1 ] ; do
         exit 0
     elif [ x"$input" == "x/r" ] ; then
         echo "Resetting context..."
-        create_ctx()
+        chewie r u ctx="$CHEWIECHAT_CONTEXT_FILE" > /dev/null
+        chewie u aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are a helpful assistant." > /dev/null
         echo "context file reset"
         continue
     fi
     echo -n "chewie > "
     echo "$input" | chewie aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" aih="$CHEWIECHAT_HOST" ctx="$CHEWIECHAT_CONTEXT_FILE"
 done
-
-function create_ctx()
-{
-    chewie r u ctx="$CHEWIECHAT_CONTEXT_FILE" > /dev/null
-    chewie u aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are a helpful assistant." > /dev/null
-}
