@@ -36,6 +36,7 @@ const char *program_name = NULL;
 static int set_missing_aih(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int set_missing_aip(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int set_missing_ctx(option_t *option, json_object *actions_obj, json_object *settings_obj);
+static int set_missing_fun(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int set_missing_mdl(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int set_missing_qry(option_t *option, json_object *actions_obj, json_object *settings_obj);
 static int set_missing_sys(option_t *option, json_object *actions_obj, json_object *settings_obj);
@@ -83,7 +84,7 @@ static option_t option_fun = {
     .arg_type = option_arg_required,
     .value = NULL,
     .validate = option_fun_validate,
-    .set_missing = NULL
+    .set_missing = set_missing_fun
 };
 static option_t option_mdl = {
     .name = "mdl",
@@ -219,9 +220,6 @@ int configure(json_object *actions_obj, json_object *settings_obj, int ac, char 
         debug_return 1;
     }
     if (json_object_object_get(settings_obj, SETTING_KEY_FUNCTION_FILE) != NULL) {
-        if (context_set_function_filename(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_FUNCTION_FILE)))) {
-            debug_return 1;
-        }
     }
     debug("settings_obj = %s\n", json_object_to_json_string(settings_obj)); 
 #ifdef DEBUG
@@ -360,6 +358,25 @@ term:
         free(context_fn);
     }
     debug_return result;
+}
+
+static int set_missing_fun(option_t *option, json_object *actions_obj, json_object *settings_obj) {
+    debug_enter();
+    json_object *value;
+    if (json_object_object_get_ex(settings_obj, SETTING_KEY_FUNCTION_FILE, &value)) {
+        if (context_set_function_filename(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_FUNCTION_FILE)))) {
+            debug_return 1;
+        }
+        json_object_object_add(actions_obj, ACTION_KEY_LOAD_FUNCTION_FILE, json_object_new_string(option->value));
+        debug("function file is set to %s\n", json_object_get_string(value));
+        debug_return 0;
+    }
+    const char *f = context_get_function_filename();
+    if (f != NULL) {
+        json_object_object_add(settings_obj, SETTING_KEY_FUNCTION_FILE, json_object_new_string(f));
+        json_object_object_add(actions_obj, ACTION_KEY_LOAD_FUNCTION_FILE, json_object_new_string(f));
+    }
+    debug_return 0;
 }
 
 static int set_missing_mdl(option_t *option, json_object *actions_obj, json_object *settings_obj) {

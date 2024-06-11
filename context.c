@@ -204,6 +204,21 @@ term:
     debug_return ai_provider;
 }
 
+const char *context_get_function_filename(void) {
+    debug_enter();
+    json_object *fn_obj = NULL;
+    const char *fn = NULL;
+    if (context_obj == NULL) {
+        goto term;
+    }
+    if (!json_object_object_get_ex(context_obj, CONTEXT_KEY_FUNCTION_FILENAME, &fn_obj)) {
+        goto term;
+    }
+    fn = json_object_get_string(fn_obj);
+term:
+    debug_return fn;
+}
+
 const char *context_get_model(void) {
     debug_enter();
     json_object *model_obj = NULL;

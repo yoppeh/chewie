@@ -62,6 +62,8 @@ extern json_object *context_get(const char *field);
 extern const char *context_get_ai_host(void);
 /** @brief Gwt the AI provider from the context. */
 extern const char *context_get_ai_provider(void);
+/** @brief Get the function filename from the context. */
+extern const char *context_get_function_filename(void);
 /** @brief Get the model from the contest. */
 extern const char *context_get_model(void);
 /** @brief Get the system prompt from the context. */
