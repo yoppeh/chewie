@@ -61,14 +61,6 @@ static option_t option_ctx = {
     .validate = option_ctx_validate,
     .set_missing = set_missing_ctx
 };
-static option_t option_aip = {
-    .name = "aip",
-    .description = "Set the AI provider. Use \"?\" to list available providers.",
-    .arg_type = option_arg_required,
-    .value = NULL,
-    .validate = option_aip_validate,
-    .set_missing = set_missing_aip
-};
 static option_t option_aih = {
     .name = "aih",
     .description = "Set the AI provider host.",
@@ -76,6 +68,14 @@ static option_t option_aih = {
     .value = NULL,
     .validate = option_aih_validate,
     .set_missing = set_missing_aih
+};
+static option_t option_aip = {
+    .name = "aip",
+    .description = "Set the AI provider. Use \"?\" to list available providers.",
+    .arg_type = option_arg_required,
+    .value = NULL,
+    .validate = option_aip_validate,
+    .set_missing = set_missing_aip
 };
 static option_t option_fun = {
     .name = "fun",
@@ -218,6 +218,11 @@ int configure(json_object *actions_obj, json_object *settings_obj, int ac, char 
     if (context_set_model(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_MODEL)))) {
         debug_return 1;
     }
+    if (json_object_object_get(settings_obj, SETTING_KEY_FUNCTION_FILE) != NULL) {
+        if (context_set_function_filename(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_FUNCTION_FILE)))) {
+            debug_return 1;
+        }
+    }
     debug("settings_obj = %s\n", json_object_to_json_string(settings_obj)); 
 #ifdef DEBUG
     debug("configure() all options:\n"); debug_indent_inc();
@@ -233,6 +238,7 @@ static int set_missing_aih(option_t *option, json_object *actions_obj, json_obje
     debug_enter();
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_HOST, &value)) {
+        context_set_ai_host(json_object_get_string(value));
         debug("aih set on command line to %s\n", json_object_get_string(value));
         debug_return 0;
     }
@@ -270,6 +276,7 @@ static int set_missing_aih(option_t *option, json_object *actions_obj, json_obje
         fprintf(stderr, "Error setting an API backend host\n");
         debug_return 1;
     }
+    context_set_ai_host(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_HOST)));
     debug_return 0;
 }
 
@@ -278,6 +285,7 @@ static int set_missing_aip(option_t *option, json_object *actions_obj, json_obje
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_PROVIDER, &value)) {
         debug("aip set on command line to %s\n", json_object_get_string(value));
+        context_set_ai_provider(json_object_get_string(value));
         debug_return 0;
     }
     api_id_t id = api_id_default;
@@ -296,6 +304,7 @@ static int set_missing_aip(option_t *option, json_object *actions_obj, json_obje
     char *api_name = (char *)api_interface->get_api_name();
     debug("setting aip to %s\n", api_name);
     json_object_object_add(settings_obj, SETTING_KEY_AI_PROVIDER, json_object_new_string(api_name));
+    context_set_ai_provider(api_name);
     debug_return 0;
 }
 
@@ -378,6 +387,7 @@ static int set_missing_mdl(option_t *option, json_object *actions_obj, json_obje
         }
     }
     json_object_object_add(settings_obj, SETTING_KEY_AI_MODEL, json_object_new_string(m));
+    context_set_model(m);
     debug_return 0;
 }
 
@@ -412,6 +422,7 @@ static int set_missing_sys(option_t *option, json_object *actions_obj, json_obje
          debug_return 0;
     }
     json_object_object_add(settings_obj, SETTING_KEY_SYSTEM_PROMPT, json_object_new_string(s));
+    context_set_system_prompt(s);
     debug_return 0;
 }
 
@@ -459,6 +470,7 @@ static int option_emb_validate(option_t *option, json_object *actions_obj, json_
 static int option_fun_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
     json_object_object_add(actions_obj, ACTION_KEY_LOAD_FUNCTION_FILE, json_object_new_string(option->value));
+    context_set_function_filename(option->value);
     debug_return 0;
 }
 

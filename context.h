@@ -80,6 +80,8 @@ extern int context_set(const char *field, json_object *obj);
 extern int context_set_ai_host(const char *s);
 /** @brief Set the AI provider in the context file. */
 extern int context_set_ai_provider(const char *s);
+/** @brief Set the fimction filename in the context file. */
+extern int context_set_function_filename(const char *s);
 /** @brief Set the model in the context file. */
 extern int context_set_model(const char *s);
 /** @brief Set the system prompt in the context file. */

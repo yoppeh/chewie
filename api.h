@@ -56,6 +56,8 @@ typedef const api_interface_t *(*get_api_interface_func_t)(void);
 extern const get_api_interface_func_t api_interfaces[];
 /** @brief The AIP API interface currently in use. */
 extern api_interface_t *api_interface;
+/** @brief The default API to use if none is specified anywhere. */
+extern api_id_t api_default;
 
 /** 
  * @brief Convert an API name to an api_id_t. 

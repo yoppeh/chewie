@@ -25,6 +25,7 @@
 #define CONTEXT_KEY_AI_PROVIDER         "ai-provider"
 #define CONTEXT_KEY_MODEL               "model"
 #define CONTEXT_KEY_CONTEXT_FILENAME    "context-filename"
+#define CONTEXT_KEY_FUNCTION_FILENAME   "function-filename"
 #define CONTEXT_KEY_RESPONSE            "response"
 #define CONTEXT_KEY_HISTORY             "history"
 #define CONTEXT_KEY_TIMESTAMP           "timestamp"
@@ -175,7 +176,6 @@ const char *context_get_ai_host(void) {
     debug_enter();
     json_object *ai_host_obj = NULL;
     const char *ai_host = NULL;
-    const char *result = NULL;
     if (context_obj == NULL) {
         debug("context_obj is NULL\n");
         goto term;
@@ -193,7 +193,6 @@ const char *context_get_ai_provider(void) {
     debug_enter();
     json_object *ai_provider_obj = NULL;
     const char *ai_provider = NULL;
-    const char *result = NULL;
     if (context_obj == NULL) {
         goto term;
     }
@@ -209,7 +208,6 @@ const char *context_get_model(void) {
     debug_enter();
     json_object *model_obj = NULL;
     const char *model = NULL;
-    const char *result = NULL;
     if (context_obj == NULL) {
         goto term;
     }
@@ -314,6 +312,23 @@ int context_set_ai_provider(const char *s) {
         goto term;
     }
     json_object_object_add(context_obj, CONTEXT_KEY_AI_PROVIDER, ai_provider_obj);
+    result = 0;
+term:
+    debug_return result;
+}
+
+int context_set_function_filename(const char *s) {
+    debug_enter();
+    json_object *fn_obj = NULL;
+    int result = 1;
+    if (context_obj == NULL) {
+        goto term;
+    }
+    fn_obj = json_object_new_string(s);
+    if (fn_obj == NULL) {
+        goto term;
+    }
+    json_object_object_add(context_obj, CONTEXT_KEY_FUNCTION_FILENAME, fn_obj);
     result = 0;
 term:
     debug_return result;

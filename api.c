@@ -27,6 +27,8 @@ const get_api_interface_func_t api_interfaces[] = {
 };
 api_interface_t *api_interface;
 
+api_id_t api_default = api_id_openai;
+
 api_id_t api_name_to_id(const char *name) {
     debug_enter();
     if (name != NULL) {

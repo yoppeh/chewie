@@ -15,6 +15,7 @@
 #include "api.h"
 #include "chewie.h"
 #include "configure.h"
+#include "context.h"
 #include "option.h"
 #include "setting.h"
 
@@ -90,11 +91,17 @@ int option_parse_args(option_t **options, int ac, char **av, json_object *action
 
 int option_set_missing(option_t **options, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
-    json_object *api_opt = NULL;
     api_id_t api = api_id_none;
-    if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_PROVIDER, &api_opt)) {
-        api = api_name_to_id(json_object_get_string(api_opt));
+    /* need to get the api from the settings object first */
+    for (int i = 0; options[i] != NULL; i++) {
+        if (strcmp(options[i]->name, "aip") == 0) {
+            if (options[i]->set_missing(options[i], actions_obj, settings_obj) != 0) {
+                debug_return 1;
+            }
+            break;
+        }
     }
+    api = api_name_to_id(json_object_get_string(json_object_object_get(settings_obj, "aip")));
     for (int i = 0; options[i] != NULL; i++) {
         if (options[i]->set_missing != NULL) {
             api_id_t opt_api = api_name_to_id(options[i]->api);
