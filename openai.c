@@ -40,7 +40,6 @@ static const char ai_provider[] = "openai";
 static CURL *curl = NULL;
 
 static struct json_tokener *json = NULL;
-static const char *context_fn = NULL;
 static char *auth_header = NULL;
 static FILE *tmp_response = NULL;
 static int64_t timestamp = 0;
@@ -166,8 +165,8 @@ static int get_embeddings(json_object *settings) {
         fprintf(stderr, "Error creating new JSON object\n");
         debug_return 1;
     }
-    json_object_object_add(query_obj, "input", json_object_object_get(settings, SETTING_KEY_PROMPT));
-    json_object_object_add(query_obj, "model", json_object_object_get(settings, SETTING_KEY_EMBEDDING_MODEL));
+    json_object_object_add(query_obj, "input", json_object_get(json_object_object_get(settings, SETTING_KEY_PROMPT)));
+    json_object_object_add(query_obj, "model", json_object_get(json_object_object_get(settings, SETTING_KEY_EMBEDDING_MODEL)));
     setup_curl(query_obj, endpoint, get_embeddings_callback, NULL);
     debug("openai get_embeddings: %s\n", json_object_to_json_string_ext(query_obj, JSON_C_TO_STRING_PLAIN));
     res = curl_easy_perform(curl);
@@ -286,7 +285,6 @@ static int print_model_list(json_object *options) {
     if ((endpoint = get_endpoint(host, api_listmodels_endpoint)) == NULL) {
         debug_return 1;
     }
-    printf("ENDPOINT: %s\n", endpoint);
     setup_curl(NULL, endpoint, print_model_list_callback, NULL);
     printf("Models available at %s:\n", host);
     res = curl_easy_perform(curl);
@@ -392,7 +390,7 @@ static const char *query(json_object *options) {
             fprintf(stderr, "Error adding role to JSON object\n");
             goto term;
         }
-        if (json_object_object_add(user_obj, "content", prompt_obj) != 0) {
+        if (json_object_object_add(user_obj, "content", json_object_get(prompt_obj)) != 0) {
             fprintf(stderr, "Error adding content to JSON object\n");
             goto term;
         }
@@ -401,8 +399,8 @@ static const char *query(json_object *options) {
             goto term;
         }
     }
+    json_object *tool_calls = NULL;
     while (1) {
-        json_object *tool_calls;
         query_obj = json_object_new_object();
         if (query_obj == NULL) {
             fprintf(stderr, "Error creating new JSON object\n");
@@ -413,7 +411,7 @@ static const char *query(json_object *options) {
             json_object *new_entry = json_object_new_object();
             json_object_object_add(new_entry, "role", json_object_new_string("assistant"));
             json_object_object_add(new_entry, "content", NULL);
-            json_object_object_add(new_entry, "tool_calls", tool_calls);
+            json_object_object_add(new_entry, "tool_calls", json_object_get(tool_calls));
             json_object_array_add(messages_obj, new_entry);
             size_t array_len = json_object_array_length(tool_outputs);
             for (size_t i = 0; i < array_len; i++) {
@@ -423,21 +421,27 @@ static const char *query(json_object *options) {
                 }
             }
         } 
-        json_object_object_add(query_obj, "messages", messages_obj);
+        json_object_object_add(query_obj, "messages", json_object_get(messages_obj));
         if (json_object_object_get_ex(options, SETTING_KEY_TOOLS, &tools)) {
             if (tools == NULL) {
                 fprintf(stderr, "Error getting tools from options\n");
                 goto term;
             }
-            json_object_object_add(query_obj, "tools", tools);
+            json_object_object_add(query_obj, "tools", json_object_get(tools));
         }
         setup_curl(query_obj, endpoint, query_callback, response_obj);
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
             if (json_object_object_get_ex(response_obj, "tool_calls", &tool_calls)) {
                 if (tool_calls != NULL) {
+                    json_object_get(tool_calls);
+                    json_object_object_del(response_obj, "tool_calls");
                     tool_outputs = use_tool(tool_calls);
+                    if (tool_outputs == NULL) {
+                        goto term;
+                    }
                     curl_easy_reset(curl);
+                    json_tokener_reset(json);
                     continue;
                 }
             }
@@ -448,9 +452,6 @@ static const char *query(json_object *options) {
     timestamp = time(NULL);
     if (json_object_object_get_ex(options, SETTING_KEY_PROMPT, &prompt_obj)) {
         prompt_str = json_object_get_string(prompt_obj);
-    }
-    if (json_object_object_get_ex(options, SETTING_KEY_SYSTEM_PROMPT, &field_obj)) {
-        json_object_object_add(query_obj, SETTING_KEY_SYSTEM_PROMPT, field_obj);
     }
     response = file_read_tmp(&tmp_response);
     if (response == NULL) {
@@ -494,13 +495,13 @@ static size_t query_callback(void *contents, size_t size, size_t nmemb, void *us
                 debug_return 0;
             }
             if (json_object_object_get_ex(choice, "message", &message)) {
-                if (json_object_object_get_ex(message, "tool_calls", &tools)) {
-                    json_object_object_add(response_obj, "tool_calls", tools);
+                if (json_object_object_get_ex(message, "tool_calls", &tools) && tools != NULL) {
+                    json_object_object_add(response_obj, "tool_calls", json_object_get(tools));
                     debug("Received: %s\n", json_object_to_json_string_ext(json_obj, JSON_C_TO_STRING_PLAIN));
                     debug("Received tool call: %s\n", json_object_to_json_string_ext(tools, JSON_C_TO_STRING_PLAIN));
                     debug_return 0;
                 }
-                if (json_object_object_get_ex(message, "content", &content)) {
+                if (json_object_object_get_ex(message, "content", &content) && content != NULL) {
                     const char *s = (char *)json_object_get_string(content);
                     printf("%s\n", s);
                     file_append_tmp(&tmp_response, s);
@@ -537,38 +538,23 @@ static json_object *query_get_history(json_object *options) {
     json_object *system_prompt_obj = NULL;
     json_object *context_history_obj = NULL;
     json_object *new_entry;
-    json_object *context_fn_obj = NULL;
     int context_history_count = 0;
-    const char *system_prompt_str = NULL;
-    if (context_fn == NULL) {
-        if (!json_object_object_get_ex(options, SETTING_KEY_CONTEXT_FILENAME, &context_fn_obj)) {
-            fprintf(stderr, "Error getting context file name from options\n");
-            debug_return NULL;
-        }
-        context_fn = json_object_get_string(context_fn_obj);
-    }
-    if (context_fn != NULL) {
-        debug("Loading context from %s\n", context_fn);
-        context_load(context_fn);
-    } else {
-        fprintf(stderr, "Error getting context file name\n");
-        debug_return NULL;
-    }
+    /* The context was already loaded (and possibly reset or updated) by
+       configure(), so don't reload it from disk here. */
     history_obj = json_object_new_array();
     if (history_obj == NULL) {
         fprintf(stderr, "Error creating new JSON object\n");
         debug_return NULL;
     }
-    system_prompt_str = context_get_system_prompt();
-    system_prompt_obj = json_object_new_string(system_prompt_str);
-    if (system_prompt_obj != NULL) {
+    if (json_object_object_get_ex(options, SETTING_KEY_SYSTEM_PROMPT, &system_prompt_obj) &&
+        system_prompt_obj != NULL && json_object_get_string_len(system_prompt_obj) > 0) {
         new_entry = json_object_new_object();
         if (new_entry == NULL) {
             fprintf(stderr, "Error creating new JSON object\n");
             debug_return NULL;
         }
         json_object_object_add(new_entry, "role", json_object_new_string("system"));
-        json_object_object_add(new_entry, "content", system_prompt_obj);
+        json_object_object_add(new_entry, "content", json_object_get(system_prompt_obj));
         json_object_array_add(history_obj, new_entry);
     }
     context_history_obj = context_get_history();
@@ -578,41 +564,30 @@ static json_object *query_get_history(json_object *options) {
     context_history_count = json_object_array_length(context_history_obj);
     for (int i = 0; i < context_history_count; i++) {
         json_object *entry = json_object_array_get_idx(context_history_obj, i);
-        const char *prompt_str = NULL;
-        const char *response_str = NULL;
-        if (entry != NULL) {
-            json_object *role_obj = NULL;
-            json_object_object_get_ex(entry, "role", &role_obj);
-            if (role_obj != NULL) {
-                if (strcmp(json_object_get_string(role_obj), "system") != 0) {
-                    prompt_str = context_get_history_prompt(entry);
-                    response_str = context_get_history_response(entry);
-                    if (prompt_str != NULL) {
-                        new_entry = json_object_new_object();
-                        if (new_entry == NULL) {
-                            fprintf(stderr, "Error creating new JSON object\n");
-                            debug_return NULL;
-                        }
-                        if (system_prompt_obj != NULL && json_object_get_boolean(system_prompt_obj)) {
-                            json_object_object_add(new_entry, "role", json_object_new_string("system"));
-                        } else {
-                            json_object_object_add(new_entry, "role", json_object_new_string("user"));
-                        }
-                        json_object_object_add(new_entry, "content", json_object_new_string(prompt_str));
-                        json_object_array_add(history_obj, new_entry);
-                    }
-                    if (response_str != NULL) {
-                        new_entry = json_object_new_object();
-                        if (new_entry == NULL) {
-                            fprintf(stderr, "Error creating new JSON object\n");
-                            debug_return NULL;
-                        }
-                        json_object_object_add(new_entry, "role", json_object_new_string("assistant"));
-                        json_object_object_add(new_entry, "content", json_object_new_string(response_str));
-                        json_object_array_add(history_obj, new_entry);
-                    }
-                }
+        if (entry == NULL) {
+            continue;
+        }
+        const char *prompt_str = context_get_history_prompt(entry);
+        const char *response_str = context_get_history_response(entry);
+        if (prompt_str != NULL) {
+            new_entry = json_object_new_object();
+            if (new_entry == NULL) {
+                fprintf(stderr, "Error creating new JSON object\n");
+                debug_return NULL;
             }
+            json_object_object_add(new_entry, "role", json_object_new_string("user"));
+            json_object_object_add(new_entry, "content", json_object_new_string(prompt_str));
+            json_object_array_add(history_obj, new_entry);
+        }
+        if (response_str != NULL) {
+            new_entry = json_object_new_object();
+            if (new_entry == NULL) {
+                fprintf(stderr, "Error creating new JSON object\n");
+                debug_return NULL;
+            }
+            json_object_object_add(new_entry, "role", json_object_new_string("assistant"));
+            json_object_object_add(new_entry, "content", json_object_new_string(response_str));
+            json_object_array_add(history_obj, new_entry);
         }
     }
     debug_return history_obj;

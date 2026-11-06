@@ -11,6 +11,7 @@
 #include <json-c/json.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -91,7 +92,7 @@ static const char *get_default_host(void) {
     char *s = getenv("OLLAMA_HOST");
     if (s != NULL) {
         int l = strlen(s) + 1;
-        if (strncmp(s, "http://", sizeof("http://") - 1) != 0) {
+        if (strstr(s, "://") == NULL) {
             l += strlen("http://");
             host = malloc(l);
             if (host != NULL) {
@@ -314,8 +315,10 @@ static const char *query(json_object *options) {
     json_object_object_add(query_obj, "prompt", json_object_new_string(prompt_str));
     json_object_object_add(query_obj, "options", options_obj);
     if (embeddings != NULL && embeddings[0] == '[') {
-        field_obj = json_tokener_parse_ex(json, embeddings, strlen(embeddings));
-        json_object_object_add(query_obj, "context", field_obj);
+        field_obj = json_tokener_parse(embeddings);
+        if (field_obj != NULL) {
+            json_object_object_add(query_obj, "context", field_obj);
+        }
     }
     if (json_object_object_get_ex(options, SETTING_KEY_BUFFERED, &field_obj)) {
         int b = json_object_get_boolean(field_obj);
@@ -344,57 +347,86 @@ term:
     debug_return NULL;
 }
 
-static size_t query_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+static int handle_query_object(json_object *json_obj) {
     debug_enter();
-    static json_object *json_obj = NULL;
-    enum json_tokener_error jerr;
     static FILE *tmp_response = NULL;
     static FILE *tmp_context = NULL;
-    json_obj = json_tokener_parse_ex(json, ptr, nmemb);
-    jerr = json_tokener_get_error(json);
-    if (jerr == json_tokener_continue) {
-        debug_return nmemb;
-    }
-    if (jerr != json_tokener_success) {
-        fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
+    json_object *data = NULL;
+    if (!json_object_is_type(json_obj, json_type_object)) {
         debug_return 0;
     }
-    enum json_type type = json_object_get_type(json_obj);
-    if (type == json_type_object) {
-        json_object *data = NULL;
-        if (json_object_object_get_ex(json_obj, "response", &data)) {
-            const char *response = json_object_get_string(data);
+    if (json_object_object_get_ex(json_obj, "error", &data)) {
+        fprintf(stderr, "\n>> Error: %s\n", json_object_get_string(data));
+        debug_return 0;
+    }
+    if (json_object_object_get_ex(json_obj, "response", &data)) {
+        const char *response = json_object_get_string(data);
+        if (response != NULL) {
             fprintf(stdout, "%s", response);
             fflush(stdout);
             file_append_tmp(&tmp_response, response);
         }
-        if (json_object_object_get_ex(json_obj, "context", &data)) {
-            const char *embeddings = json_object_get_string(data);
+    }
+    if (json_object_object_get_ex(json_obj, "context", &data)) {
+        const char *embeddings = json_object_get_string(data);
+        if (embeddings != NULL) {
             file_append_tmp(&tmp_context, embeddings);
         }
-        if (json_object_object_get_ex(json_obj, "done", &data)) {
-            if (json_object_get_boolean(data)) {
-                json_object *ollama_obj = json_object_new_object();
-                if (!ollama_obj) {
-                    fprintf(stderr, "Error constructing JSON updates object\n");
-                    debug_return 0;
-                }
-                const char *response = file_read_tmp(&tmp_response);
-                const char *embeddings = file_read_tmp(&tmp_context);
-                json_object_object_add(ollama_obj, "embeddings", json_tokener_parse_ex(json, embeddings, strlen(embeddings)));
-                context_add_history(prompt_str, response, timestamp);
-                context_set("ollama", ollama_obj);
-                context_update();
-                debug_return nmemb;
-            }
-
-        }
-        if (json_object_object_get_ex(json_obj, "error", &data)) {
-            printf("\n>> Error: %s\n", json_object_get_string(data));
-            debug_return nmemb;
-        } 
     }
-    debug_return nmemb;
+    if (json_object_object_get_ex(json_obj, "done", &data) && json_object_get_boolean(data)) {
+        char *response = file_read_tmp(&tmp_response);
+        char *embeddings = file_read_tmp(&tmp_context);
+        json_object *ollama_obj = json_object_new_object();
+        if (ollama_obj == NULL) {
+            fprintf(stderr, "Error constructing JSON updates object\n");
+            free(response);
+            free(embeddings);
+            debug_return 1;
+        }
+        if (embeddings != NULL) {
+            json_object *embeddings_obj = json_tokener_parse(embeddings);
+            if (embeddings_obj != NULL) {
+                json_object_object_add(ollama_obj, "embeddings", embeddings_obj);
+            }
+        }
+        context_add_history(prompt_str, response != NULL ? response : "", timestamp);
+        context_set("ollama", ollama_obj);
+        json_object_put(ollama_obj);
+        context_update();
+        free(response);
+        free(embeddings);
+    }
+    debug_return 0;
+}
+
+static size_t query_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    debug_enter();
+    size_t len = size * nmemb;
+    size_t offset = 0;
+    /* A single chunk can contain several newline-delimited JSON objects
+       (or end partway through one), so keep parsing until it's consumed. */
+    while (offset < len) {
+        json_object *json_obj = json_tokener_parse_ex(json, ptr + offset, (int)(len - offset));
+        enum json_tokener_error jerr = json_tokener_get_error(json);
+        if (jerr == json_tokener_continue) {
+            break;
+        }
+        if (jerr != json_tokener_success) {
+            fprintf(stderr, "Error parsing JSON response: %s\n", json_tokener_error_desc(jerr));
+            debug_return 0;
+        }
+        offset += json_tokener_get_parse_end(json);
+        json_tokener_reset(json);
+        int r = handle_query_object(json_obj);
+        json_object_put(json_obj);
+        if (r != 0) {
+            debug_return 0;
+        }
+        while (offset < len && (ptr[offset] == '\n' || ptr[offset] == '\r' || ptr[offset] == ' ')) {
+            offset++;
+        }
+    }
+    debug_return len;
 }
 
 static int get_embeddings(json_object *settings) {

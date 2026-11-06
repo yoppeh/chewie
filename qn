@@ -5,15 +5,25 @@
 # script that uses chewie to implement a nixos-specific chat bot.
 #
 
-if [ "$CHEWIE_API" == "ollama" ]; then
-QN_MODEL="codellama:7b-instruct"
-elif [ "$CHEWIE_API" == "openai" ]; then
-QN_MODEL="gpt-3.5-turbo"
-elif [ "$CHEWIE_API" == "groq" ]; then
-QN_MODEL="llama3-8b-8192"
-else
-CHEWIE_API="ollama"
-fi
+# API selection: CHEWIE_API, then CHEWIE_AI_PROVIDER, then ollama. "groq" uses
+# Groq's OpenAI-compatible endpoint with the key from GROQ_API_KEY.
+CHEWIE_API="${CHEWIE_API:-${CHEWIE_AI_PROVIDER:-ollama}}"
+case "$CHEWIE_API" in
+openai)
+    QN_MODEL="gpt-3.5-turbo"
+    CHEWIE_AIP=(aip=openai)
+    ;;
+groq)
+    QN_MODEL="llama3-8b-8192"
+    CHEWIE_AIP=(aip=openai aih=https://api.groq.com/openai)
+    export OPENAI_API_KEY="${GROQ_API_KEY:-$OPENAI_API_KEY}"
+    ;;
+*)
+    CHEWIE_API="ollama"
+    QN_MODEL="codellama:7b-instruct"
+    CHEWIE_AIP=(aip=ollama)
+    ;;
+esac
 
 QN_CONTEXT_PATH=~/.cache/chewie
 QN_CONTEXT=$QN_CONTEXT_PATH/qn-context.json
@@ -32,10 +42,10 @@ if [ "$1" == "-s" ] ; then
     echo "Using model \"$QN_MODEL\""
     echo "Using context file \"$QN_CONTEXT\""
     mkdir -p $QN_CONTEXT_PATH
-    chewie r u ctx="$QN_CONTEXT" > /dev/null
-    chewie u ctx="$QN_CONTEXT" mdl="$QN_MODEL" sys="You are an intelligent assistant helping me use NixOS. All of your responses should be in the context of using NixOS. If you do not know the answer to a question, just say \"I don\'t know\"." > /dev/null
+    chewie "${CHEWIE_AIP[@]}" r u ctx="$QN_CONTEXT" > /dev/null
+    chewie "${CHEWIE_AIP[@]}" u ctx="$QN_CONTEXT" mdl="$QN_MODEL" sys="You are an intelligent assistant helping me use NixOS. All of your responses should be in the context of using NixOS. If you do not know the answer to a question, just say \"I don't know\"." > /dev/null
     echo "done!"
     exit 0
 fi
 
-printf "%q" "$@" | chewie ctx="$QN_CONTEXT" mdl="$QN_MODEL"
+echo "$*" | chewie "${CHEWIE_AIP[@]}" ctx="$QN_CONTEXT" mdl="$QN_MODEL"

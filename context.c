@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -38,7 +39,7 @@ static const char *context_fn = NULL;
 static json_object *context_obj = NULL;
 
 static json_object *read_context_file(const char *fn);
-static int write_context_file(const char *fn, json_object *context_obj);
+static json_object *new_trimmed_string(const char *s);
 
 void context_add_history(const char *prompt, const char *response, const int64_t timestamp) {
     debug_enter();
@@ -55,18 +56,10 @@ void context_add_history(const char *prompt, const char *response, const int64_t
         json_object_object_add(context_obj, CONTEXT_KEY_HISTORY, history_obj);
     }
     if (prompt != NULL) {
-        while (isspace(*prompt) && (*prompt != '\0')) prompt++;
-        char *s = (char *)prompt + strlen(prompt) - 1;
-        while (isspace(*s)) s--;
-        *(s + 1) = '\0';
-        prompt_obj = json_object_new_string(prompt);
+        prompt_obj = new_trimmed_string(prompt);
     }
     if (response != NULL) {
-        while (isspace(*response) && (*response != '\0')) response++;
-        char *s = (char *)response + strlen(response) - 1;
-        while (isspace(*s) && (s > response)) s--;
-        *(s + 1) = '\0';
-        response_obj = json_object_new_string(response);
+        response_obj = new_trimmed_string(response);
     }
     timestamp_obj = json_object_new_int64(timestamp);
     if (timestamp_obj != NULL && prompt_obj != NULL && response_obj != NULL) {
@@ -77,6 +70,10 @@ void context_add_history(const char *prompt, const char *response, const int64_t
     }
     if (new_entry != NULL) {
         json_object_array_add(history_obj, new_entry);
+    } else {
+        json_object_put(timestamp_obj);
+        json_object_put(prompt_obj);
+        json_object_put(response_obj);
     }
     debug_return;
 }
@@ -93,7 +90,12 @@ json_object *context_get(const char *field) {
 
 void context_load(const char *fn) {
     debug_enter();
+    if (context_obj != NULL) {
+        json_object_put(context_obj);
+        context_obj = NULL;
+    }
     if (fn != NULL) {
+        free((void *)context_fn);
         context_fn = strdup(fn);
         context_obj = read_context_file(fn);
         if (context_obj != NULL) {
@@ -107,12 +109,24 @@ void context_load(const char *fn) {
 
 void context_new(const char *fn) {
     debug_enter();
-    context_fn = fn;
+    if (fn != NULL && fn != context_fn) {
+        free((void *)context_fn);
+        context_fn = strdup(fn);
+    }
     debug("creating new context_obj\n");
     if (context_obj != NULL) {
         json_object_put(context_obj);
     }
     context_obj = json_object_new_object();
+    debug_return;
+}
+
+void context_clear_provider_settings(void) {
+    debug_enter();
+    if (context_obj != NULL) {
+        json_object_object_del(context_obj, CONTEXT_KEY_AI_HOST);
+        json_object_object_del(context_obj, CONTEXT_KEY_MODEL);
+    }
     debug_return;
 }
 
@@ -240,7 +254,7 @@ const char *context_get_system_prompt(void) {
     debug_enter();
     json_object *system_prompt_obj = NULL;
     const char *system_prompt = NULL;
-    const char *result = "";
+    const char *result = NULL;
     if (context_obj == NULL) {
         goto term;
     }
@@ -248,7 +262,7 @@ const char *context_get_system_prompt(void) {
         goto term;
     }
     system_prompt = json_object_get_string(system_prompt_obj);
-    if (system_prompt == NULL) {
+    if (system_prompt == NULL || system_prompt[0] == '\0') {
         goto term;
     }
     result = strdup(system_prompt);
@@ -386,6 +400,9 @@ int context_set_system_prompt(const char *s) {
 void context_update(void) {
     debug_enter();
     debug("writing context file \"%s\"\n", context_fn);
+    if (context_fn == NULL || context_obj == NULL) {
+        debug_return;
+    }
     const char *s = json_object_to_json_string_ext(context_obj, JSON_C_TO_STRING_PRETTY);
     file_write(context_fn, s);
     debug_return;
@@ -395,6 +412,7 @@ json_object *read_context_file(const char *fn) {
     debug_enter();
     const char *context = NULL;
     json_tokener *json = NULL;
+    json_object *obj = NULL;
     if (fn == NULL) {
         fprintf(stderr, "No context filename\n");
         debug_return NULL;
@@ -407,7 +425,12 @@ json_object *read_context_file(const char *fn) {
     if (json == NULL) {
         goto term;
     }
-    context_obj = json_tokener_parse_ex(json, context, strlen(context));
+    obj = json_tokener_parse_ex(json, context, strlen(context));
+    if (obj != NULL && !json_object_is_type(obj, json_type_object)) {
+        fprintf(stderr, "Context file \"%s\" is not a JSON object; starting a new context\n", fn);
+        json_object_put(obj);
+        obj = NULL;
+    }
 term:
     if (context != NULL) {
         free((void *)context);
@@ -415,24 +438,13 @@ term:
     if (json != NULL) {
         json_tokener_free(json);
     }
-    debug_return context_obj;
+    debug_return obj;
 }
 
-static int write_context_file(const char *fn, json_object *context_obj) {
+static json_object *new_trimmed_string(const char *s) {
     debug_enter();
-    if (fn == NULL) {
-        fprintf(stderr, "No context filename\n");
-        debug_return 1;
-    }
-    if (context_obj == NULL) {
-        fprintf(stderr, "No context object\n");
-        debug_return 1;
-    }
-    const char *context_json = json_object_to_json_string_ext(context_obj, JSON_C_TO_STRING_PRETTY);
-    if (context_json == NULL) {
-        fprintf(stderr, "Error converting context object to JSON string\n");
-        debug_return 1;
-    }
-    file_write(fn, context_json);
-    debug_return 0;
+    const char *end = s + strlen(s);
+    while (s < end && isspace((unsigned char)*s)) s++;
+    while (end > s && isspace((unsigned char)end[-1])) end--;
+    debug_return json_object_new_string_len(s, (int)(end - s));
 }

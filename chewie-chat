@@ -6,15 +6,18 @@
 #
 
 echo "Setting up chewie-chat... "
-if [ x"$CHEWIECHAT_API" == "x" ] ; then
-    CHEWIECHAT_API="openai"
-fi
-if [ x"$CHEWIECHAT_MODEL" == "x" ] ; then
-    CHEWIECHAT_MODEL="gpt-4o"
-fi
-if [ x"$CHEWIECHAT_API" == "xopenai" ] ; then
-    CHEWIECHAT_HOST="https://api.openai.com"
-fi
+CHEWIECHAT_API="${CHEWIECHAT_API:-openai}"
+CHEWIECHAT_MODEL="${CHEWIECHAT_MODEL:-gpt-4o}"
+case "$CHEWIECHAT_API" in
+groq)
+    # Groq's OpenAI-compatible endpoint, key from GROQ_API_KEY.
+    CHEWIECHAT_AIP=(aip=openai aih=https://api.groq.com/openai)
+    export OPENAI_API_KEY="${GROQ_API_KEY:-$OPENAI_API_KEY}"
+    ;;
+*)
+    CHEWIECHAT_AIP=(aip="$CHEWIECHAT_API")
+    ;;
+esac
 echo "Using API \"$CHEWIECHAT_API\""
 echo "Using model \"$CHEWIECHAT_MODEL\""
 
@@ -27,7 +30,7 @@ mkdir -p $CHEWIECHAT_CONTEXT_PATH
 if [ ! -f $CHEWIECHAT_CONTEXT_FILE ] ; then
     echo "Creating context file..."
     chewie r u ctx="$CHEWIECHAT_CONTEXT_FILE" > /dev/null
-    chewie u aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are a helpful assistant." > /dev/null
+    chewie u "${CHEWIECHAT_AIP[@]}" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are a helpful assistant." > /dev/null
     echo "context file created"
 fi
 
@@ -51,10 +54,10 @@ while [ 1 ] ; do
     elif [ x"$input" == "x/r" ] ; then
         echo "Resetting context..."
         chewie r u ctx="$CHEWIECHAT_CONTEXT_FILE" > /dev/null
-        chewie u aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are a helpful assistant." > /dev/null
+        chewie u "${CHEWIECHAT_AIP[@]}" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE" sys="You are a helpful assistant." > /dev/null
         echo "context file reset"
         continue
     fi
     echo -n "chewie > "
-    echo "$input" | chewie aip="$CHEWIECHAT_API" mdl="$CHEWIECHAT_MODEL" aih="$CHEWIECHAT_HOST" ctx="$CHEWIECHAT_CONTEXT_FILE"
+    echo "$input" | chewie "${CHEWIECHAT_AIP[@]}" mdl="$CHEWIECHAT_MODEL" ctx="$CHEWIECHAT_CONTEXT_FILE"
 done

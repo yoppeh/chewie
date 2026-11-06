@@ -101,7 +101,7 @@ int option_set_missing(option_t **options, json_object *actions_obj, json_object
             break;
         }
     }
-    api = api_name_to_id(json_object_get_string(json_object_object_get(settings_obj, "aip")));
+    api = api_name_to_id(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_PROVIDER)));
     for (int i = 0; options[i] != NULL; i++) {
         if (options[i]->set_missing != NULL) {
             api_id_t opt_api = api_name_to_id(options[i]->api);
@@ -143,7 +143,9 @@ static option_t *match_option(option_t **options, char *s) {
         if (equal > l) {
             l = equal;
         }
-        if (strncmp(name, s, l) == 0) {
+        int match = strncmp(name, s, l) == 0;
+        free(name);
+        if (match) {
             debug_return options[i];
         }
     }

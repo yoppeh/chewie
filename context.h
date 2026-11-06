@@ -54,6 +54,12 @@ extern void context_load(const char *fn);
 extern void context_new(const char *fn);
 /** @brief Delete the system prompt from the context file. */
 extern int context_delete_system_prompt(void);
+
+/**
+ * @brief Remove the provider-specific host and model from the context. Used
+ * when the AI provider is changed so the old provider's values aren't reused.
+ */
+extern void context_clear_provider_settings(void);
 /** @brief Dump the chat history from the context file. */
 extern int context_dump_history(void);
 /** @brief get an arbitrary object from a named field in the context. */

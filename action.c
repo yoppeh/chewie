@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <json-c/json_object.h>
@@ -139,20 +140,12 @@ static action_result_t get_embeddings(json_object *settings, json_object *data) 
     debug_enter();
     char *query = NULL;
     json_object *prompt = NULL;
-    if (json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &prompt) && prompt != NULL) {
-        json_object_object_add(settings, SETTING_KEY_PROMPT, prompt);
-    } else {
+    if (!json_object_object_get_ex(settings, SETTING_KEY_PROMPT, &prompt) || prompt == NULL) {
         query = input_get();
         if (query != NULL) {
             json_object_object_add(settings, SETTING_KEY_PROMPT, json_object_new_string(query));
             free(query);
-            query = NULL;
         }
-    }
-    if (query != NULL) {
-        json_object_object_add(settings, SETTING_KEY_PROMPT, json_object_new_string(query));
-        free(query);
-        query = NULL;
     }
     if (api_interface->get_embeddings(settings)) {
         debug_return ACTION_ERROR;
@@ -224,16 +217,16 @@ static action_result_t show_version(json_object *settings, json_object *data) {
 
 static action_result_t reset_context(json_object *settings, json_object *options) {
     debug_enter();
+    /* The in-memory context was already reset in configure(), before the
+       provider/host/model settings were stored in it. Only truncate the file
+       here so a reset sticks even if the query that follows fails. */
     json_object *context_fn = NULL;
     if (json_object_object_get_ex(settings, SETTING_KEY_CONTEXT_FILENAME, &context_fn)) {
         const char *fn = json_object_get_string(context_fn);
         if (fn != NULL) {
-            context_new(fn);
-        } else {
-            context_new(context_fn_default);
+            file_truncate(fn);
+            debug_return ACTION_CONTINUE;
         }
-        file_truncate(fn);
-        debug_return ACTION_CONTINUE;
     }
     debug_return ACTION_ERROR;
 }

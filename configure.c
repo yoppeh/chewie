@@ -60,7 +60,6 @@ static option_t option_ctx = {
     .arg_type = option_arg_required,
     .value = NULL,
     .validate = option_ctx_validate,
-    .set_missing = set_missing_ctx
 };
 static option_t option_aih = {
     .name = "aih",
@@ -191,24 +190,18 @@ int configure(json_object *actions_obj, json_object *settings_obj, int ac, char 
         debug("configure() option_parse_args() failed\n");
         debug_return 1;
     }
-    if ((context_fn_obj = json_object_object_get(settings_obj, SETTING_KEY_CONTEXT_FILENAME)) == NULL) {
-        debug("context filename not found\n");
-        if (set_missing_ctx(NULL, actions_obj, settings_obj)) {
-            debug("configure() set_missing_ctx() failed\n");
-            debug_return 1;
-        }
-    } else {
-        context_load(json_object_get_string(context_fn_obj));
-    }   
+    if (set_missing_ctx(NULL, actions_obj, settings_obj)) {
+        debug("configure() set_missing_ctx() failed\n");
+        debug_return 1;
+    }
     if (option_r.present) {
         debug("resetting context\n");
-        if (context_fn_obj != NULL) {
-            context_new(json_object_get_string(context_fn_obj));
-        } else {
-            context_new(context_fn_default);
-        }
+        context_fn_obj = json_object_object_get(settings_obj, SETTING_KEY_CONTEXT_FILENAME);
+        context_new(json_object_get_string(context_fn_obj));
     }
-    option_set_missing(options, actions_obj, settings_obj);
+    if (option_set_missing(options, actions_obj, settings_obj)) {
+        debug_return 1;
+    }
     debug("actions_obj = %s\n", json_object_to_json_string(actions_obj));
     if (context_set_ai_host(json_object_get_string(json_object_object_get(settings_obj, SETTING_KEY_AI_HOST)))) {
         debug_return 1;
@@ -283,6 +276,11 @@ static int set_missing_aip(option_t *option, json_object *actions_obj, json_obje
     json_object *value;
     if (json_object_object_get_ex(settings_obj, SETTING_KEY_AI_PROVIDER, &value)) {
         debug("aip set on command line to %s\n", json_object_get_string(value));
+        const char *prev = context_get_ai_provider();
+        if (prev != NULL && api_name_to_id(prev) != api_name_to_id(json_object_get_string(value))) {
+            debug("provider changed from %s, discarding saved host and model\n", prev);
+            context_clear_provider_settings();
+        }
         context_set_ai_provider(json_object_get_string(value));
         debug_return 0;
     }
@@ -330,6 +328,10 @@ static int set_missing_ctx(option_t *option, json_object *actions_obj, json_obje
     }
     const char *d = (char *)context_dir_default;
     const char *h = getenv("HOME");
+    if (h == NULL) {
+        fprintf(stderr, "HOME is not set; use ctx= or %s to set the context file\n", ENV_KEY_CONTEXT_FILENAME);
+        debug_return 1;
+    }
     int l = strlen(h);
     l++;
     l += strlen(d);
@@ -439,7 +441,7 @@ static int set_missing_sys(option_t *option, json_object *actions_obj, json_obje
          debug_return 0;
     }
     json_object_object_add(settings_obj, SETTING_KEY_SYSTEM_PROMPT, json_object_new_string(s));
-    context_set_system_prompt(s);
+    free((void *)s);
     debug_return 0;
 }
 
@@ -468,7 +470,7 @@ static int option_aip_validate(option_t *option, json_object *actions_obj, json_
 
 static int option_buf_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
-    json_object_object_add(actions_obj, ACTION_KEY_BUFFERED, json_object_new_boolean(true));
+    json_object_object_add(settings_obj, SETTING_KEY_BUFFERED, json_object_new_boolean(true));
     debug_return 0;
 }
 
@@ -480,7 +482,12 @@ static int option_ctx_validate(option_t *option, json_object *actions_obj, json_
 
 static int option_emb_validate(option_t *option, json_object *actions_obj, json_object *settings_obj) {
     debug_enter();
-    json_object_object_add(actions_obj, ACTION_KEY_GET_EMBEDDINGS, json_object_new_string(option->value));
+    if (option->value != NULL) {
+        json_object_object_add(settings_obj, SETTING_KEY_PROMPT, json_object_new_string(option->value));
+        json_object_object_add(actions_obj, ACTION_KEY_GET_EMBEDDINGS, json_object_new_string(option->value));
+    } else {
+        json_object_object_add(actions_obj, ACTION_KEY_GET_EMBEDDINGS, json_object_new_boolean(true));
+    }
     debug_return 0;
 }
 

@@ -223,17 +223,19 @@ That will work for Arch linux. If libcurl and/or json-c aren't installed in
 `make CFLAGS="-I/path/to/libcurl/include" LDFLAGS="-L/path/to/libcurl/lib"`,
 etc.
 
-For example, on Mac OS, I used MacPorts to install libcurl and json-c. MacPorts
-installs to /opt/local. I then install to my personal bin and sbin directories.
-So:
-`make CFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib"`
+On Mac OS, the Homebrew and MacPorts (/opt/local) include and library paths
+are picked up automatically, so a plain `make` works with either. To install
+to your personal bin and sbin directories:
 `make prefix="~/" install`
 
 ## Scripts
 
 These scripts setup contexts for specific tasks. Mostly included for reference.
 These will use whichever API is specified in the `CHEWIE_API` environment
-variable. If that isn't set, `ollama` will be used. The model used by the
+variable (or `CHEWIE_AI_PROVIDER`, if `CHEWIE_API` isn't set). If neither is
+set, `ollama` will be used. `groq` is also accepted; it uses Groq's
+OpenAI-compatible endpoint and takes the key from `GROQ_API_KEY` (or
+`OPENAI_API_KEY`). Re-run a script with `-s` after changing the API. The model used by the
 script will depend on the API. For `openai`, generally `gpt-3.5-turbo` will be
 used. For `ollama`, different models are used which are tuned to the task.
 

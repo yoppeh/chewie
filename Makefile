@@ -20,15 +20,15 @@
 #   CFLAGS
 #	   Flags to pass to the C compiler. Defaults to -I/usr/include. If libcurl
 #	   or libjson-c are installed in a non-standard location, you may need to
-#	   add -I/path/to/include to this variable. On Mac OS, for example, I use
-#	   MacPorts, so I use make CFLAGS="-I/opt/local/include".
+#	   add -I/path/to/include to this variable. Homebrew and MacPorts
+#	   (/opt/local) include paths are added automatically when found.
 #   debug=1
 #       Build chewie with debug info
 #   LDFLAGS
 #	   Flags to pass to the linker. Defaults to -L/usr/lib. If libcurl or
 #	   libjson-c are installed in a non-standard location, you may need to add
-#	   -L/path/to/lib to this variable. On Mac OS, for example, I use MacPorts,
-#	   so I use make LDFLAGS="-L/opt/local/lib".
+#	   -L/path/to/lib to this variable. Homebrew and MacPorts library paths
+#	   are added automatically when found.
 #   prefix
 #	   The directory to install chewie into. Defaults to /usr/local. chewie is
 #	   installed into $(prefix)/bin and chewie-chat and qcg are installed into
@@ -38,19 +38,30 @@
 ifeq ($(CC),)
 CC = gcc
 endif
-CFLAGS += -I/usr/include
-LDFLAGS += -L/usr/lib
+# "override" so these are still applied when CFLAGS/LDFLAGS are given on the
+# make command line (otherwise e.g. debug=1 would silently lose -DDEBUG).
+override CFLAGS += -I/usr/include
+override LDFLAGS += -L/usr/lib
+BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
+ifneq ($(BREW_PREFIX),)
+override CFLAGS += -I$(BREW_PREFIX)/include
+override LDFLAGS += -L$(BREW_PREFIX)/lib
+endif
+ifneq ($(wildcard /opt/local/include/json-c),)
+override CFLAGS += -I/opt/local/include
+override LDFLAGS += -L/opt/local/lib
+endif
 ifdef debug
-CFLAGS += -g3 -D DEBUG
+override CFLAGS += -g3 -D DEBUG
 else
-CFLAGS += -O3 -flto
-LDFLAGS += -flto
+override CFLAGS += -O3 -flto
+override LDFLAGS += -flto
 endif
 ifeq ($(prefix),)
 prefix = /usr/local
 endif
 
-LIBS = -lcurl -ljson-c -llua
+LIBS = -lcurl -ljson-c
 
 OBJS = main.o action.o api.o configure.o context.o file.o function.o input.o ollama.o openai.o option.o
 
@@ -79,7 +90,7 @@ openai.o : chewie.h api.h context.h file.h openai.h setting.h
 option.o : chewie.h api.h configure.h option.h setting.h
 
 chewie : $(OBJS)
-	$(CC) $(LDFLAGS) $(LIBS) $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LIBS) -o $@
 ifndef debug
 	strip $@
 endif
